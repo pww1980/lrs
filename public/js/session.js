@@ -136,9 +136,13 @@
     stopTts();
     setTtsBtnState('loading');
 
+    var abortCtrl  = new AbortController();
+    var ttsTimeout = setTimeout(function () { abortCtrl.abort(); }, 8000);
+
     var url = '/index.php?_r=%2Flearn%2Fsession%2Ftts&item_id=' + itemId + '&speed=' + speed;
-    fetch(url)
+    fetch(url, { signal: abortCtrl.signal })
       .then(function (res) {
+        clearTimeout(ttsTimeout);
         var ct = res.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
           return res.json().then(function (cfg) { playBrowserTts(cfg); });
@@ -147,6 +151,7 @@
         }
       })
       .catch(function () {
+        clearTimeout(ttsTimeout);
         setTtsBtnState('idle');
       });
   }

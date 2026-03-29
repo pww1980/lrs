@@ -240,7 +240,7 @@ class TTSService
         array  $headers,
         string $body,
         bool   $binary  = false,
-        int    $timeout = 30
+        int    $timeout = 7
     ): array {
         if (!function_exists('curl_init')) {
             throw new \RuntimeException('curl ist nicht verfügbar. Bitte php-curl installieren.');

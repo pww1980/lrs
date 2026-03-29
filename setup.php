@@ -23,14 +23,6 @@ function superadminExists(): bool
     }
 }
 
-// Datenbank noch nicht angelegt?
-if (!file_exists(DB_FILE)) {
-    die(renderError(
-        'Datenbank nicht gefunden',
-        'Bitte zuerst <code>php database/migrate.php</code> ausführen.'
-    ));
-}
-
 if (superadminExists()) {
     // Setup bereits abgeschlossen — Seite ist dauerhaft deaktiviert
     redirect('/login');

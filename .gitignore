@@ -1,0 +1,21 @@
+# Umgebung — NIEMALS committen
+.env
+
+# SQLite-Datenbank
+data/lerntrainer.sqlite
+data/*.sqlite
+
+# PHP-Caches
+*.cache
+*.log
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

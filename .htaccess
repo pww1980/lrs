@@ -1,0 +1,17 @@
+# Lennarts Diktat-Trainer — Haupt-.htaccess
+# Leitet alle Anfragen an index.php weiter (außer existierende Dateien/Verzeichnisse)
+
+Options -Indexes
+
+RewriteEngine On
+
+# Statische Dateien direkt ausliefern (CSS, JS, Bilder etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Verzeichnisse mit echten Dateien direkt ausliefern
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Alles andere an den Router
+RewriteRule ^ index.php [L]

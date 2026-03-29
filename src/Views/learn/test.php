@@ -551,7 +551,7 @@ $sections = $progress['sections'] ?? [];
   <?php if ($viewState === 'test'): ?>
     <button class="btn-navbar" id="btn-pause-nav" type="button">⏸ Pause</button>
   <?php else: ?>
-    <a href="/logout" class="btn-navbar">Abmelden</a>
+    <a href="<?= url('/logout') ?>" class="btn-navbar">Abmelden</a>
   <?php endif; ?>
 </nav>
 
@@ -585,7 +585,7 @@ $sections = $progress['sections'] ?? [];
       <?php endforeach; ?>
     </div>
 
-    <form method="POST" action="/learn/test">
+    <form method="POST" action="<?= url('/learn/test') ?>">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
       <button class="btn-start" type="submit">
         🗡️ Test starten
@@ -778,7 +778,7 @@ const TEST_DATA = {
       </div>
     <?php endif; ?>
 
-    <a href="/learn" class="btn-home" id="btn-home" style="display:none">🏠 Zur Startseite</a>
+    <a href="<?= url('/learn') ?>" class="btn-home" id="btn-home" style="display:none">🏠 Zur Startseite</a>
   </div>
 </div>
 

@@ -75,7 +75,7 @@ $blockMeta = [
   Nebenkategorien haben. Die KI berücksichtigt das beim Erstellen des Übungsplans.
 </div>
 
-<form method="post" action="/setup/wizard" novalidate>
+<form method="post" action="<?= url('/setup/wizard') ?>" novalidate>
   <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrfToken) ?>">
   <input type="hidden" name="wizard_action" value="next">
 

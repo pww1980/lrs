@@ -29,8 +29,7 @@ class DashboardController
         // Wenn noch kein Kind → Wizard
         $childCount = (int)db()->query("SELECT COUNT(*) FROM users WHERE role='child'")->fetchColumn();
         if ($childCount === 0) {
-            header('Location: /setup/wizard');
-            exit;
+            redirect('/setup/wizard');
         }
 
         $children   = self::loadChildrenData($adminId);

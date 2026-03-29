@@ -70,8 +70,7 @@ class TestController
         if (!$section) {
             // Alle Sektionen abgeschlossen
             self::markTestCompleted($test['id'], $userId);
-            header('Location: /learn/test/results?test_id=' . $test['id']);
-            exit;
+            redirect('/learn/test/results?test_id=' . $test['id']);
         }
 
         // Sektion auf in_progress setzen wenn noch pending
@@ -150,12 +149,10 @@ class TestController
         } catch (\Throwable $e) {
             $db->rollBack();
             error_log('TestController::startTest — ' . $e->getMessage());
-            header('Location: /learn?error=test_start_failed');
-            exit;
+            redirect('/learn?error=test_start_failed');
         }
 
-        header('Location: /learn/test');
-        exit;
+        redirect('/learn/test');
     }
 
     /**
@@ -448,8 +445,7 @@ class TestController
         $test = $stmt->fetch();
 
         if (!$test) {
-            header('Location: /learn');
-            exit;
+            redirect('/learn');
         }
 
         // Ergebnisse pro Sektion für die Zusammenfassung

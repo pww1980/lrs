@@ -33,8 +33,7 @@ if (!file_exists(DB_FILE)) {
 
 if (superadminExists()) {
     // Setup bereits abgeschlossen — Seite ist dauerhaft deaktiviert
-    header('Location: /login');
-    exit;
+    redirect('/login');
 }
 
 // ── CSRF Token ────────────────────────────────────────────────────────
@@ -140,7 +139,7 @@ function renderError(string $title, string $body): string
       <p style="color:#555; margin: .75rem 0 1.5rem">
         Superadmin-Account wurde angelegt.
       </p>
-      <a href="/login" class="btn btn-primary">Zum Login</a>
+      <a href="<?= url('/login') ?>" class="btn btn-primary">Zum Login</a>
       <p style="font-size:.8rem; color:#888; margin-top:1.5rem">
         Diese Seite ist ab sofort dauerhaft deaktiviert.
       </p>
@@ -162,7 +161,7 @@ function renderError(string $title, string $body): string
       </div>
     <?php endif; ?>
 
-    <form method="post" action="/setup" novalidate>
+    <form method="post" action="<?= url('/setup') ?>" novalidate>
       <input type="hidden" name="csrf_token"
              value="<?= htmlspecialchars($_SESSION['setup_csrf'] ?? '') ?>">
 

@@ -22,7 +22,7 @@
       </div>
     <?php endif; ?>
 
-    <form method="post" action="/login" autocomplete="off" novalidate>
+    <form method="post" action="<?= url('/login') ?>" autocomplete="off" novalidate>
       <input type="hidden" name="csrf_token"
              value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
 

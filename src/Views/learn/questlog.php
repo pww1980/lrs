@@ -223,7 +223,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     <div class="subtitle"><?= htmlspecialchars($childName) ?>s Lernreise</div>
   </div>
   <div class="header-right">
-    <a href="/logout">Abmelden</a>
+    <a href="<?= url('/logout') ?>">Abmelden</a>
   </div>
 </header>
 
@@ -242,7 +242,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
           (int)db()->query("SELECT COUNT(*) FROM tests WHERE user_id={$_SESSION['user_id']} AND status='completed'")->fetchColumn() > 0;
       ?>
       <?php if (!$hasTest): ?>
-        <br><a href="/learn/test" class="btn-practice" style="display:inline-block;margin-top:1rem;">
+        <br><a href="<?= url('/learn/test') ?>" class="btn-practice" style="display:inline-block;margin-top:1rem;">
           Einstufungstest starten
         </a>
       <?php endif; ?>
@@ -359,7 +359,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
               </div>
               <div class="quest-action">
                 <?php if ($isPracticeTarget && $activeUnit): ?>
-                  <a href="/learn/session?unit_id=<?= (int)$activeUnit['id'] ?>"
+                  <a href="<?= url('/learn/session?unit_id=' . (int)$activeUnit['id']) ?>"
                      class="btn-practice pulse">
                     Üben!
                   </a>
@@ -379,7 +379,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
                     $unit = $unitStmt->fetch();
                     if ($unit):
                   ?>
-                    <a href="/learn/session?unit_id=<?= (int)$unit['id'] ?>"
+                    <a href="<?= url('/learn/session?unit_id=' . (int)$unit['id']) ?>"
                        class="btn-practice">
                       Üben
                     </a>

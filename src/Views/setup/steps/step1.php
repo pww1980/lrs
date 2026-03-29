@@ -5,7 +5,7 @@
 $v = fn(string $k, $default = '') => htmlspecialchars($d1[$k] ?? $default);
 ?>
 
-<form method="post" action="/setup/wizard" novalidate class="wizard-form">
+<form method="post" action="<?= url('/setup/wizard') ?>" novalidate class="wizard-form">
   <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrfToken) ?>">
   <input type="hidden" name="wizard_action" value="next">
 

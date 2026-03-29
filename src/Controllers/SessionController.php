@@ -128,15 +128,13 @@ class SessionController
         $unitId = (int)($_GET['unit_id'] ?? 0);
 
         if (!$unitId) {
-            header('Location: /learn/questlog');
-            exit;
+            redirect('/learn/questlog');
         }
 
         // plan_unit validieren — muss zum aktiven Plan des Kindes gehören
         $unit = self::validateUnit($unitId, $userId);
         if (!$unit) {
-            header('Location: /learn/questlog');
-            exit;
+            redirect('/learn/questlog');
         }
 
         // Aktive Session für diese Unit finden
@@ -166,14 +164,12 @@ class SessionController
         $unitId = (int)($_POST['unit_id'] ?? 0);
 
         if (!$unitId) {
-            header('Location: /learn/questlog');
-            exit;
+            redirect('/learn/questlog');
         }
 
         $unit = self::validateUnit($unitId, $userId);
         if (!$unit) {
-            header('Location: /learn/questlog');
-            exit;
+            redirect('/learn/questlog');
         }
 
         // Laufende Sessions für diese Unit abbrechen
@@ -200,12 +196,10 @@ class SessionController
         } catch (\Throwable $e) {
             $db->rollBack();
             error_log('SessionController::startSession — ' . $e->getMessage());
-            header('Location: /learn/questlog?error=start_failed');
-            exit;
+            redirect('/learn/questlog?error=start_failed');
         }
 
-        header('Location: /learn/session?unit_id=' . $unitId);
-        exit;
+        redirect('/learn/session?unit_id=' . $unitId);
     }
 
     /**

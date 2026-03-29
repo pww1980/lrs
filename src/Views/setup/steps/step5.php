@@ -81,7 +81,7 @@ $weeks    = round($interval / 7, 1);
   </p>
 </div>
 
-<form method="post" action="/setup/wizard" novalidate>
+<form method="post" action="<?= url('/setup/wizard') ?>" novalidate>
   <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrfToken) ?>">
   <input type="hidden" name="wizard_action" value="next">
 

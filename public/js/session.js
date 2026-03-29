@@ -81,7 +81,7 @@
     answerInput.addEventListener('keydown', onKeydown);
     submitBtn.addEventListener('click', onSubmit);
     nextBtn.addEventListener('click', onNext);
-    if (mapBtn) mapBtn.addEventListener('click', function () { window.location.href = '/learn/questlog'; });
+    if (mapBtn) mapBtn.addEventListener('click', function () { window.location.href = '/index.php?_r=%2Flearn%2Fquestlog'; });
   }
 
   // ── Item laden ────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@
     stopTts();
     setTtsBtnState('loading');
 
-    var url = '/learn/session/tts?item_id=' + itemId + '&speed=' + speed;
+    var url = '/index.php?_r=%2Flearn%2Fsession%2Ftts&item_id=' + itemId + '&speed=' + speed;
     fetch(url)
       .then(function (res) {
         var ct = res.headers.get('Content-Type') || '';
@@ -227,7 +227,7 @@
 
     var responseTimeMs = startTime ? (Date.now() - startTime) : 0;
 
-    fetch('/learn/session/answer', {
+    fetch('/index.php?_r=%2Flearn%2Fsession%2Fanswer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -358,7 +358,7 @@
     submitBtn.disabled = true;
     nextBtn.disabled   = true;
 
-    fetch('/learn/session/complete', {
+    fetch('/index.php?_r=%2Flearn%2Fsession%2Fcomplete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -378,7 +378,7 @@
   function fetchSessionFeedback() {
     if (aiFeedbackLoading) aiFeedbackLoading.style.display = 'flex';
 
-    fetch('/learn/session/feedback', {
+    fetch('/index.php?_r=%2Flearn%2Fsession%2Ffeedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf_token: csrfToken, session_id: sessionId }),

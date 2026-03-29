@@ -196,6 +196,27 @@ match (true) {
     str_starts_with($uri, '/admin/dashboard')
         => \App\Controllers\DashboardController::show(),
 
+    // Kind bearbeiten
+    preg_match('#^/admin/child/(\d+)/edit$#', $uri, $m) && $method === 'GET'
+        => \App\Controllers\DashboardController::editChild(),
+
+    preg_match('#^/admin/child/(\d+)/edit$#', $uri, $m) && $method === 'POST'
+        => \App\Controllers\DashboardController::updateChild(),
+
+    // Seed words (Admin, per Browser aufrufbar)
+    $uri === '/admin/seed-words' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            \App\Helpers\Auth::verifyCsrf();
+            header('Content-Type: application/json');
+            ob_start();
+            require BASE_DIR . '/database/seed_words.php';
+            ob_end_clean();
+            $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
+            echo json_encode(['success' => true, 'total' => $total]);
+            exit;
+        })(),
+
     // Lehrerin-Bericht (PDF-fähige HTML-Seite)
     preg_match('#^/admin/report/(\d+)$#', $uri, $m)
         => \App\Controllers\ReportController::show((int)$m[1]),

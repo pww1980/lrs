@@ -600,6 +600,16 @@ $sections = $progress['sections'] ?? [];
 <?php /* ========================================================
        AKTIVER TEST
    ======================================================== */ ?>
+<?php elseif ($viewState === 'test' && !$item): ?>
+<div class="test-main" style="text-align:center;padding:3rem 1rem">
+  <span style="font-size:3rem">⚠️</span>
+  <h2 style="margin:.75rem 0 .5rem">Keine Wörter gefunden</h2>
+  <p style="color:rgba(240,232,208,.65);margin-bottom:1.5rem">
+    Für diese Klassenstufe sind noch keine Übungswörter vorhanden.<br>
+    Bitte einen Admin bitten, Wörter zu laden.
+  </p>
+  <a href="<?= url('/logout') ?>" class="btn-navbar" style="display:inline-block;padding:.65rem 1.5rem;font-size:.9rem">Abmelden</a>
+</div>
 <?php elseif ($viewState === 'test' && $item): ?>
 
 <!-- Fortschrittsbalken -->

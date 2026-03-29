@@ -392,6 +392,87 @@ class DashboardController
     }
 
     /**
+     * GET /admin/child/{id}/edit
+     * Zeigt Bearbeitungsformular für ein Kind.
+     */
+    public static function editChild(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        $adminId = (int)$_SESSION['user_id'];
+        $childId = (int)($_GET['id'] ?? 0);
+
+        $child = self::loadChildForAdmin($adminId, $childId);
+        if (!$child) {
+            redirect('/admin/dashboard');
+        }
+
+        $error = $_SESSION['child_edit_error'] ?? null;
+        unset($_SESSION['child_edit_error']);
+
+        require __DIR__ . '/../Views/admin/child_edit.php';
+    }
+
+    /**
+     * POST /admin/child/{id}/edit
+     * Speichert Änderungen am Kindprofil.
+     */
+    public static function updateChild(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+
+        $adminId = (int)$_SESSION['user_id'];
+        $childId = (int)($_POST['child_id'] ?? 0);
+
+        $child = self::loadChildForAdmin($adminId, $childId);
+        if (!$child) {
+            redirect('/admin/dashboard');
+        }
+
+        $displayName = trim($_POST['display_name'] ?? '');
+        $gradeLevel  = (int)($_POST['grade_level']  ?? 4);
+        $schoolType  = trim($_POST['school_type']   ?? 'Grundschule');
+        $theme       = trim($_POST['theme']         ?? 'minecraft');
+        $active      = isset($_POST['active']) ? 1 : 0;
+
+        if ($displayName === '') {
+            $_SESSION['child_edit_error'] = 'Name darf nicht leer sein.';
+            redirect('/admin/child/' . $childId . '/edit');
+        }
+
+        $validThemes = ['minecraft', 'space', 'ocean'];
+        if (!in_array($theme, $validThemes, true)) {
+            $theme = 'minecraft';
+        }
+
+        db()->prepare(
+            "UPDATE users SET display_name=?, grade_level=?, school_type=?, theme=?, active=?
+             WHERE id=? AND role='child'"
+        )->execute([$displayName, $gradeLevel, $schoolType, $theme, $active, $childId]);
+
+        $_SESSION['flash'] = ['type' => 'success', 'text' => 'Profil von ' . htmlspecialchars($displayName) . ' gespeichert.'];
+        redirect('/admin/dashboard');
+    }
+
+    /** Lädt ein Kind nur wenn der Admin Zugriff hat (oder Superadmin). */
+    private static function loadChildForAdmin(int $adminId, int $childId): ?array
+    {
+        $role = $_SESSION['role'] ?? '';
+        if ($role === 'superadmin') {
+            $stmt = db()->prepare("SELECT * FROM users WHERE id=? AND role='child'");
+            $stmt->execute([$childId]);
+        } else {
+            $stmt = db()->prepare("
+                SELECT u.* FROM users u
+                JOIN child_admins ca ON u.id = ca.child_id
+                WHERE u.id=? AND ca.admin_id=? AND u.role='child'
+            ");
+            $stmt->execute([$childId, $adminId]);
+        }
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
      * Berechnet plan_units für eine Kombination aus severity + strategy_level.
      * Identisch zur Logik in AnalysisController.
      */

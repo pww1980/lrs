@@ -309,6 +309,10 @@ $formatLabel = [
                    target="_blank">📄</a>
               <?php endif; ?>
             </td>
+            <td>
+              <a href="<?= url('/admin/child/' . (int)$child['id'] . '/edit') ?>"
+                 class="btn btn-sm btn-secondary" title="Profil bearbeiten">✏️</a>
+            </td>
           </tr>
           <?php endforeach; ?>
         </tbody>

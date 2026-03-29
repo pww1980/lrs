@@ -19,6 +19,14 @@ $pageTitle = 'Dashboard — ' . APP_NAME;
 <main class="container">
   <h2>Papa-Dashboard</h2>
   <p>Willkommen, <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?>.</p>
+
+  <?php if (!empty($_SESSION['flash'])): ?>
+    <?php $flash = $_SESSION['flash']; unset($_SESSION['flash']); ?>
+    <div class="alert alert-<?= htmlspecialchars($flash['type'] ?? 'info') ?>">
+      <?= htmlspecialchars($flash['message']) ?>
+    </div>
+  <?php endif; ?>
+
   <p><em>Dashboard wird in einem späteren Schritt implementiert.</em></p>
 </main>
 </body>

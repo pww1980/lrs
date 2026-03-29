@@ -1,0 +1,31 @@
+{
+  "id": "minecraft",
+  "name": "Minecraft",
+  "icon": "⛏️",
+  "locked_by_default": false,
+  "biomes": [
+    { "id": "forest",  "label": "Der Wald",   "icon": "🌲", "block_index": 0 },
+    { "id": "desert",  "label": "Die Wüste",  "icon": "🏜️", "block_index": 1 },
+    { "id": "nether",  "label": "Der Nether", "icon": "🌋", "block_index": 2 },
+    { "id": "the_end", "label": "Das End",    "icon": "🌟", "block_index": 3 }
+  ],
+  "colors": {
+    "primary":    "#5d8a38",
+    "primary_dk": "#3b5e1e",
+    "accent":     "#8B4513",
+    "surface":    "#f0e8d0"
+  },
+  "labels": {
+    "points":      "Erfahrungspunkte",
+    "quest":       "Quest",
+    "biome":       "Biom",
+    "achievement": "Advancement"
+  },
+  "flavor_texts": {
+    "welcome":    "Bereit für dein Abenteuer?",
+    "correct":    "Richtig! +XP",
+    "wrong":      "Noch einmal versuchen!",
+    "quest_done": "Quest abgeschlossen!",
+    "streak":     "Streak aktiv! 🔥"
+  }
+}

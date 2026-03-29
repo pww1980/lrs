@@ -38,7 +38,11 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 // ── Setup-Redirect: wenn noch kein Superadmin existiert ──────────────
 
-if ($uri !== '/setup' && !str_starts_with($uri, '/public/') && !str_starts_with($uri, '/css/') && !str_starts_with($uri, '/js/')) {
+$isStaticPath = str_starts_with($uri, '/public/')
+             || str_starts_with($uri, '/css/')
+             || str_starts_with($uri, '/js/');
+
+if ($uri !== '/setup' && !$isStaticPath) {
     try {
         $count = db()->query("SELECT COUNT(*) FROM users WHERE role = 'superadmin'")->fetchColumn();
         if ((int)$count === 0) {
@@ -86,10 +90,24 @@ match (true) {
             }
         })(),
 
-    // Admin Dashboard
+    // Setup-Wizard (läuft nur wenn noch kein Kind existiert — Guard im Controller)
+    str_starts_with($uri, '/setup/wizard')
+        => (function () {
+            (new \App\Controllers\WizardController())->handle();
+        })(),
+
+    // Admin Dashboard (leitet zum Wizard wenn noch kein Kind existiert)
     str_starts_with($uri, '/admin/dashboard')
         => (function () {
             \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            // Wenn kein Kind existiert → Wizard starten
+            $childCount = (int) db()->query(
+                "SELECT COUNT(*) FROM users WHERE role = 'child'"
+            )->fetchColumn();
+            if ($childCount === 0) {
+                header('Location: /setup/wizard');
+                exit;
+            }
             require __DIR__ . '/src/Views/admin/dashboard.php';
         })(),
 

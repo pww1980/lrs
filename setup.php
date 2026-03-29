@@ -168,7 +168,22 @@ function renderError(string $title, string $body): string
     .setup-step.active .dot { background: #2e7d32; color: #fff; }
     .setup-step.done .dot { background: #4caf50; color: #fff; }
     .step-line { width: 24px; height: 2px; background: #e0e0e0; }
-    .setup-card .form-group { text-align: left; }
+    .setup-card .form-group {
+      text-align: left;
+      margin-bottom: 1rem;
+    }
+    .setup-card .form-group label {
+      display: block;
+      margin-bottom: .35rem;
+      font-size: .875rem;
+      font-weight: 600;
+      color: #424242;
+    }
+    .setup-card .form-group input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
     .env-hint {
       background: <?= $hasEnvKey ? '#e8f5e9' : '#fff8e1' ?>;
       border: 1px solid <?= $hasEnvKey ? '#a5d6a7' : '#ffe082' ?>;

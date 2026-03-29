@@ -1,0 +1,32 @@
+{
+  "id": "space",
+  "name": "Weltraum",
+  "icon": "🚀",
+  "locked_by_default": true,
+  "unlock_hint": "Schließe Block B ab, um das Weltraum-Theme freizuschalten!",
+  "biomes": [
+    { "id": "moon",   "label": "Der Mond",    "icon": "🌙", "block_index": 0 },
+    { "id": "mars",   "label": "Der Mars",    "icon": "🔴", "block_index": 1 },
+    { "id": "saturn", "label": "Der Saturn",  "icon": "🪐", "block_index": 2 },
+    { "id": "galaxy", "label": "Die Galaxis", "icon": "🌌", "block_index": 3 }
+  ],
+  "colors": {
+    "primary":    "#1a237e",
+    "primary_dk": "#0d1442",
+    "accent":     "#7c4dff",
+    "surface":    "#e8eaf6"
+  },
+  "labels": {
+    "points":      "Sterne",
+    "quest":       "Mission",
+    "biome":       "Planet",
+    "achievement": "Auszeichnung"
+  },
+  "flavor_texts": {
+    "welcome":    "Mission gestartet!",
+    "correct":    "Ziel getroffen! ⭐",
+    "wrong":      "Kurs korrigieren!",
+    "quest_done": "Mission erfüllt!",
+    "streak":     "Treibstoff lädt! 🔥"
+  }
+}

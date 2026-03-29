@@ -3,22 +3,22 @@
  * /learn — Smart-Redirect für Kinder
  *
  * Logik:
- *  1. Kein abgeschlossener Test?        → /learn/test
- *  2. Test abgeschlossen, Plan aktiv?   → /learn/questlog
- *  3. Test abgeschlossen, kein Plan?    → Warte-Seite (Papa muss bestätigen)
+ *  1. Aktiver Test läuft?               → /learn/test
+ *  2. Noch kein abgeschlossener Test?   → /learn/test (Einstufungstest)
+ *  3. Fortschrittstest fällig + Plan aktiv? → Hinweis-Seite mit Button
+ *  4. Plan aktiv?                       → /learn/questlog
+ *  5. Kein Plan?                        → Warte-Seite
  */
 
 \App\Helpers\Auth::requireRole('child');
 $userId = (int)$_SESSION['user_id'];
 
-// 1. Aktiven oder pending Test suchen
+// 1. Aktiven Test suchen
 $activeTestStmt = db()->prepare(
     "SELECT id FROM tests WHERE user_id=? AND status IN ('pending','in_progress') LIMIT 1"
 );
 $activeTestStmt->execute([$userId]);
-$activeTest = $activeTestStmt->fetch();
-
-if ($activeTest) {
+if ($activeTestStmt->fetch()) {
     header('Location: /learn/test');
     exit;
 }
@@ -31,7 +31,6 @@ $doneTestStmt->execute([$userId]);
 $doneTest = $doneTestStmt->fetch();
 
 if (!$doneTest) {
-    // Noch kein Test → Einstufungstest starten
     header('Location: /learn/test');
     exit;
 }
@@ -43,22 +42,34 @@ $activePlanStmt = db()->prepare(
 $activePlanStmt->execute([$userId]);
 $activePlan = $activePlanStmt->fetch();
 
-if ($activePlan) {
+// Fortschrittstest fällig?
+$progressDue = \App\Services\ProgressTestService::isDue($userId);
+
+if ($activePlan && $progressDue['due']) {
+    // Hinweis anzeigen — kein automatischer Redirect, Kind entscheidet
+    // (wird unten in der Seite behandelt)
+} elseif ($activePlan) {
     header('Location: /learn/questlog');
     exit;
 }
 
-// Kein aktiver Plan: Test abgeschlossen, aber Papa hat noch nicht bestätigt
-// Zeige Warte-Seite
-$pageTitle = 'Warten — ' . APP_NAME;
+$pageTitle = 'Lernen — ' . APP_NAME;
 $themeName = $_SESSION['theme'] ?? 'minecraft';
+$csrfToken = \App\Helpers\Auth::csrfToken();
 
 // KI-Auswertung schon gelaufen?
-$analysisStmt = db()->prepare(
-    "SELECT COUNT(*) FROM test_results WHERE test_id=?"
-);
-$analysisStmt->execute([$doneTest['id']]);
-$hasAnalysis = (int)$analysisStmt->fetchColumn() > 0;
+$hasAnalysis = false;
+if ($doneTest) {
+    $analysisStmt = db()->prepare("SELECT COUNT(*) FROM test_results WHERE test_id=?");
+    $analysisStmt->execute([$doneTest['id']]);
+    $hasAnalysis = (int)$analysisStmt->fetchColumn() > 0;
+}
+
+// Modus bestimmen
+$mode = 'waiting'; // waiting | progress_due
+if ($activePlan && $progressDue['due']) {
+    $mode = 'progress_due';
+}
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -79,17 +90,17 @@ $hasAnalysis = (int)$analysisStmt->fetchColumn() > 0;
       background: #fff;
       border-radius: 16px;
       padding: 2.5rem 2rem;
-      max-width: 440px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
       box-shadow: 0 8px 32px rgba(0,0,0,.2);
     }
     .wait-icon { font-size: 4rem; margin-bottom: 1rem; }
     .wait-box h2 { font-size: 1.4rem; color: #212121; margin-bottom: 0.5rem; }
-    .wait-box p  { color: #666; line-height: 1.6; }
+    .wait-box p  { color: #666; line-height: 1.6; margin-bottom: 0.75rem; }
     .status-chip {
       display: inline-block;
-      margin-top: 1rem;
+      margin-top: 0.75rem;
       padding: 0.4rem 1rem;
       border-radius: 20px;
       font-size: 0.85rem;
@@ -97,32 +108,87 @@ $hasAnalysis = (int)$analysisStmt->fetchColumn() > 0;
     }
     .status-chip.pending  { background: #fff3e0; color: #e65100; }
     .status-chip.analysis { background: #e3f2fd; color: #1565c0; }
-    .logout-link {
+    .btn-start {
+      display: inline-block;
+      margin-top: 1.25rem;
+      background: #4caf50;
+      color: #fff;
+      border: none;
+      padding: 0.85rem 2rem;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-start:hover { background: #388e3c; }
+    .btn-later {
       display: block;
-      margin-top: 1.5rem;
-      color: #999;
+      margin-top: 0.75rem;
+      color: #888;
       font-size: 0.85rem;
       text-decoration: none;
     }
-    .logout-link:hover { color: #555; }
+    .btn-later:hover { color: #555; }
+    .logout-link {
+      display: block;
+      margin-top: 1.5rem;
+      color: #bbb;
+      font-size: 0.8rem;
+      text-decoration: none;
+    }
+    .logout-link:hover { color: #888; }
+    .days-badge {
+      display: inline-block;
+      background: #ff9800;
+      color: #fff;
+      border-radius: 20px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
   </style>
 </head>
 <body>
 <div class="wait-page">
   <div class="wait-box">
-    <div class="wait-icon">⏳</div>
-    <h2>Dein Abenteuer startet bald!</h2>
-    <?php if ($hasAnalysis): ?>
-      <p>Der Test ist ausgewertet. Papa muss deinen Lernplan jetzt nur noch bestätigen.</p>
+
+    <?php if ($mode === 'progress_due'): ?>
+      <div class="wait-icon">🏆</div>
+      <h2>Fortschrittstest fällig!</h2>
+      <?php if ($progressDue['days_overdue'] > 0): ?>
+        <span class="days-badge">
+          +<?= $progressDue['days_overdue'] ?> Tage überfällig
+        </span>
+      <?php endif; ?>
+      <p>
+        Du übst schon <?= $progressDue['interval_days'] ?> Tage —
+        Zeit zu sehen wie weit du gekommen bist!<br>
+        Der Test dauert ca. 10 Minuten.
+      </p>
+      <form method="POST" action="/learn/test">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+        <input type="hidden" name="type"       value="progress">
+        <button type="submit" class="btn-start">Fortschrittstest starten 🚀</button>
+      </form>
+      <a href="/learn/questlog" class="btn-later">Später — weiter üben</a>
+
+    <?php elseif ($hasAnalysis): ?>
+      <div class="wait-icon">⏳</div>
+      <h2>Dein Abenteuer startet bald!</h2>
+      <p>Der Test ist ausgewertet. Papa muss deinen Lernplan nur noch bestätigen.</p>
       <span class="status-chip analysis">✅ Auswertung fertig — wartet auf Papa</span>
+
     <?php else: ?>
+      <div class="wait-icon">⏳</div>
+      <h2>Dein Abenteuer startet bald!</h2>
       <p>Dein Test wird gerade ausgewertet. Das dauert nur einen Moment!</p>
       <span class="status-chip pending">⏳ Auswertung läuft...</span>
-      <script>
-        // Seite nach 30 Sekunden neu laden (falls Auswertung noch läuft)
-        setTimeout(function() { window.location.reload(); }, 30000);
-      </script>
+      <script>setTimeout(function(){ window.location.reload(); }, 30000);</script>
     <?php endif; ?>
+
     <a href="/logout" class="logout-link">Abmelden</a>
   </div>
 </div>

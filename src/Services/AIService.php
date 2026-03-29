@@ -386,6 +386,71 @@ PROMPT;
         ], array_filter($data, fn($w) => !empty($w['word'])));
     }
 
+    /**
+     * KI-Feedback nach einer abgeschlossenen Übungseinheit.
+     * Prüft ob ein Plan-Amendment nötig ist.
+     *
+     * @param  array  $sessionStats  [total_items, correct_first_try, correct_second_try, wrong_total,
+     *                                duration_seconds, format, quest_title, category]
+     * @param  array  $wrongItems    [{word, user_input, primary_category}] — max. 10
+     * @param  array  $userProfile   ['display_name', 'grade_level', 'theme']
+     * @param  int    $sessionId     Für Logging
+     * @return array{
+     *   summary:           string,
+     *   encouragement:     string,
+     *   weak_categories:   string[],
+     *   amendment_needed:  bool,
+     *   amendment_reason:  string|null
+     * }
+     */
+    public function generateSessionFeedback(
+        array $sessionStats,
+        array $wrongItems,
+        array $userProfile,
+        int   $sessionId
+    ): array {
+        $statsJson   = json_encode($sessionStats,  JSON_UNESCAPED_UNICODE);
+        $wrongJson   = json_encode(array_slice($wrongItems, 0, 10), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $profileJson = json_encode($userProfile,   JSON_UNESCAPED_UNICODE);
+
+        $prompt = <<<PROMPT
+Du gibst einem Kind nach einer Rechtschreib-Übungseinheit Feedback.
+Sei freundlich, kurz und motivierend. Minecraft-Sprache wenn theme = 'minecraft'.
+
+Schülerprofil: {$profileJson}
+Session-Statistiken: {$statsJson}
+Falsch geschriebene Wörter (bis zu 10): {$wrongJson}
+
+Bewerte:
+- Gesamtleistung (gut/mittel/schwach)
+- Ob ein Plan-Amendment nötig ist:
+  * amendment_needed=true wenn Fehlerrate > 60% ODER immer dieselbe Kategorie falsch
+  * amendment_needed=false sonst
+- Ermutigendes Fazit für das Kind (1-2 Sätze, altersgerecht)
+
+Antworte ausschließlich als gültiges JSON (kein Markdown):
+{
+  "summary": "Kurze Auswertung, 1-2 Sätze.",
+  "encouragement": "Motivierender Satz für das Kind, Minecraft-Stil wenn passend.",
+  "weak_categories": ["B2"],
+  "amendment_needed": false,
+  "amendment_reason": null
+}
+PROMPT;
+
+        $raw  = $this->sendPrompt($prompt, 'feedback', maxTokens: 600, sessionId: $sessionId);
+        $data = $this->parseJson($raw);
+
+        return [
+            'summary'          => (string)($data['summary']         ?? ''),
+            'encouragement'    => (string)($data['encouragement']   ?? ''),
+            'weak_categories'  => (array) ($data['weak_categories'] ?? []),
+            'amendment_needed' => (bool)  ($data['amendment_needed'] ?? false),
+            'amendment_reason' => isset($data['amendment_reason']) && $data['amendment_reason'] !== null
+                                    ? (string)$data['amendment_reason'] : null,
+        ];
+    }
+
     // ── Getter ────────────────────────────────────────────────────────
 
     public function getProvider(): string     { return $this->provider; }

@@ -33,9 +33,14 @@
   var progressFill  = document.getElementById('progress-fill');
   var progressText  = document.getElementById('progress-text');
   var progressPct   = document.getElementById('progress-pct');
-  var questBanner   = document.getElementById('quest-banner');
-  var completeStats = document.getElementById('complete-stats');
-  var mapBtn        = document.getElementById('map-btn');
+  var questBanner      = document.getElementById('quest-banner');
+  var completeStats    = document.getElementById('complete-stats');
+  var mapBtn           = document.getElementById('map-btn');
+  var aiFeedbackBox    = document.getElementById('ai-feedback-box');
+  var aiFeedbackLoading= document.getElementById('ai-feedback-loading');
+  var aiSummary        = document.getElementById('ai-summary');
+  var aiEncourage      = document.getElementById('ai-encourage');
+  var achievementArea  = document.getElementById('achievement-area');
 
   // ── State ──────────────────────────────────────────────────────────────
 
@@ -370,6 +375,49 @@
       });
   }
 
+  function fetchSessionFeedback() {
+    if (aiFeedbackLoading) aiFeedbackLoading.style.display = 'flex';
+
+    fetch('/learn/session/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csrf_token: csrfToken, session_id: sessionId }),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (result) {
+        if (aiFeedbackLoading) aiFeedbackLoading.style.display = 'none';
+
+        // Achievements anzeigen
+        if (result.achievements && result.achievements.length > 0 && achievementArea) {
+          result.achievements.forEach(function (ach, i) {
+            setTimeout(function () {
+              var card = document.createElement('div');
+              card.className = 'achievement-card';
+              card.innerHTML =
+                '<span class="ach-icon">' + escHtml(ach.icon) + '</span>' +
+                '<div class="ach-info">' +
+                  '<div class="ach-title">' + escHtml(ach.title) + '</div>' +
+                  '<div class="ach-desc">' + escHtml(ach.description) + '</div>' +
+                '</div>' +
+                '<span class="ach-badge">Neu!</span>';
+              achievementArea.appendChild(card);
+            }, i * 400);
+          });
+        }
+
+        // KI-Feedback anzeigen
+        var fb = result.feedback;
+        if (fb && (fb.summary || fb.encouragement) && aiFeedbackBox) {
+          if (aiSummary)   aiSummary.textContent   = fb.summary       || '';
+          if (aiEncourage) aiEncourage.textContent = fb.encouragement || '';
+          aiFeedbackBox.style.display = 'block';
+        }
+      })
+      .catch(function () {
+        if (aiFeedbackLoading) aiFeedbackLoading.style.display = 'none';
+      });
+  }
+
   function showCompleteScreen(result) {
     exerciseArea.style.display = 'none';
     var dotsEl = document.getElementById('item-dots');
@@ -378,6 +426,9 @@
     if (progressEl) progressEl.style.display = 'none';
 
     completeScreen.style.display = 'block';
+
+    // KI-Feedback asynchron nachladen
+    fetchSessionFeedback();
 
     if (result.quest_completed) {
       questBanner.textContent    = '🏆 Quest abgeschlossen!';

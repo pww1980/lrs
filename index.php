@@ -174,6 +174,10 @@ match (true) {
     $uri === '/learn/session/complete' && $method === 'POST'
         => \App\Controllers\SessionController::completeSession(),
 
+    // KI-Feedback nach Session (AJAX POST, asynchron)
+    $uri === '/learn/session/feedback' && $method === 'POST'
+        => \App\Controllers\SessionController::getFeedback(),
+
     // Session-Hauptseite (GET)
     $uri === '/learn/session' && $method === 'GET'
         => \App\Controllers\SessionController::show(),

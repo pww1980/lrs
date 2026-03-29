@@ -337,6 +337,67 @@ if ($session) {
     }
     #map-btn:hover { background: #388e3c; }
 
+    /* ── KI-Feedback Box ── */
+    #ai-feedback-box {
+      background: #f3f8ff;
+      border: 1px solid #c5d8f8;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin: 0.75rem 0;
+      text-align: left;
+    }
+    #ai-feedback-box .ai-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #1565c0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+    #ai-feedback-box .ai-summary   { color: #333; font-size: 0.9rem; margin-bottom: 0.3rem; }
+    #ai-feedback-box .ai-encourage { color: #1976d2; font-weight: 600; font-size: 0.95rem; }
+    #ai-feedback-loading {
+      color: #999;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
+      padding: 0.5rem;
+    }
+
+    /* ── Achievement Toast ── */
+    #achievement-area {
+      margin: 0.75rem 0;
+    }
+    .achievement-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: linear-gradient(135deg, #fff8e1, #fffde7);
+      border: 2px solid #ffc107;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      animation: achievement-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes achievement-pop {
+      from { transform: scale(0.8); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .achievement-card .ach-icon  { font-size: 2rem; flex-shrink: 0; }
+    .achievement-card .ach-info  { flex: 1; }
+    .achievement-card .ach-title { font-weight: 700; color: #e65100; }
+    .achievement-card .ach-desc  { font-size: 0.8rem; color: #666; margin-top: 0.1rem; }
+    .achievement-card .ach-badge {
+      background: #ffc107;
+      color: #5d3a00;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+    }
+
     /* ── Item dots ── */
     .item-dots {
       display: flex;
@@ -486,6 +547,21 @@ if ($session) {
     <h2>Einheit abgeschlossen!</h2>
     <div id="quest-banner" class="quest-complete-banner" style="display:none;"></div>
     <div class="complete-stats" id="complete-stats"></div>
+
+    <!-- Achievement Area -->
+    <div id="achievement-area"></div>
+
+    <!-- KI-Feedback -->
+    <div id="ai-feedback-box" style="display:none;">
+      <div class="ai-label">✨ KI-Feedback</div>
+      <div class="ai-summary"   id="ai-summary"></div>
+      <div class="ai-encourage" id="ai-encourage"></div>
+    </div>
+    <div id="ai-feedback-loading" style="display:none;">
+      <span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:#1976d2;"></span>
+      KI-Feedback wird geladen...
+    </div>
+
     <button type="button" id="map-btn">Zur Karte 🗺️</button>
   </div>
 

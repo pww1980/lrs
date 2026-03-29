@@ -58,8 +58,30 @@
     ttsStatus.textContent = 'Wort wird geladen…';
     ttsIcon.classList.remove('playing');
 
-    fetch(`/index.php?_r=%2Flearn%2Ftest%2Ftts&item_id=${itemId}&speed=${speed}`)
+    // Nach 3s: "Ton überspringen"-Button einblenden
+    var skipTimer = setTimeout(function () {
+      if (state === 'loading') {
+        ttsStatus.innerHTML = 'Lädt… <button type="button" id="btn-skip-tts" '
+          + 'style="margin-left:.5rem;padding:.15rem .6rem;font-size:.8rem;cursor:pointer;border-radius:4px;border:1px solid #888;background:#333;color:#fff">'
+          + 'Ton überspringen</button>';
+        var skipBtn = document.getElementById('btn-skip-tts');
+        if (skipBtn) skipBtn.addEventListener('click', function () {
+          abortController.abort();
+          ttsStatus.textContent = '(Ton übersprungen)';
+          enableAnswering();
+        });
+      }
+    }, 3000);
+
+    // AbortController für 8s Client-Timeout
+    var abortController = new AbortController();
+    var timeoutTimer = setTimeout(function () { abortController.abort(); }, 8000);
+
+    fetch(`/index.php?_r=%2Flearn%2Ftest%2Ftts&item_id=${itemId}&speed=${speed}`,
+          { signal: abortController.signal })
       .then(r => {
+        clearTimeout(skipTimer);
+        clearTimeout(timeoutTimer);
         const ct = r.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
           return r.json().then(data => ({ type: 'browser', data }));
@@ -74,7 +96,9 @@
         }
       })
       .catch(() => {
-        ttsStatus.textContent = 'Fehler beim Laden. Bitte Seite neu laden.';
+        clearTimeout(skipTimer);
+        clearTimeout(timeoutTimer);
+        ttsStatus.textContent = '(Ton nicht verfügbar)';
         enableAnswering();
       });
   }

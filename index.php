@@ -281,11 +281,11 @@ match (true) {
             \App\Helpers\Auth::requireRole('admin', 'superadmin');
             \App\Helpers\Auth::verifyCsrf();
             header('Content-Type: application/json');
-            ob_start();
+            // seed_words.php direkt einbinden — im Web-Kontext lädt es keine eigenen Abhängigkeiten
+            $inserted = 0; $skipped = 0;
             require BASE_DIR . '/database/seed_words.php';
-            ob_end_clean();
             $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
-            echo json_encode(['success' => true, 'total' => $total]);
+            echo json_encode(['success' => true, 'inserted' => $inserted, 'skipped' => $skipped, 'total' => $total]);
             exit;
         })(),
 

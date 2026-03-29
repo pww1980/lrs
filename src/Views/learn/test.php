@@ -502,6 +502,38 @@ $sections = $progress['sections'] ?? [];
     }
     .btn-home:hover { background: #a0522d; }
 
+    /* ── Analyse-Box ── */
+    .analysis-box {
+      background: #2a2a2a; border: 2px solid #555;
+      border-radius: 12px; padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .analysis-box.pending  { border-color: #7cb3e0; }
+    .analysis-box.running  { border-color: #ffd54f; }
+    .analysis-box.done     { border-color: var(--mc-primary); }
+    .analysis-box.error    { border-color: #e57373; }
+    .analysis-icon  { font-size: 2rem; display: block; margin-bottom: .4rem; }
+    .analysis-title { font-size: 1rem; font-weight: 700; margin-bottom: .3rem; }
+    .analysis-sub   { font-size: .82rem; color: rgba(240,232,208,.6); margin-bottom: .85rem; }
+    .analysis-spinner {
+      display: inline-block; width: 24px; height: 24px;
+      border: 3px solid rgba(240,232,208,.2);
+      border-top-color: #ffd54f;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      vertical-align: middle; margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-analyze {
+      display: inline-block; padding: .65rem 1.5rem;
+      background: #7cb3e0; color: #111;
+      border: none; border-radius: 8px;
+      font-size: .9rem; font-weight: 700; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-analyze:hover    { background: #90c4e8; }
+    .btn-analyze:disabled { opacity: .5; cursor: default; }
+
     /* ── Responsive ── */
     @media (max-width: 480px) {
       .start-blocks, .results-grid { grid-template-columns: 1fr; }
@@ -725,12 +757,87 @@ const TEST_DATA = {
     </div>
     <?php endif; ?>
 
-    <div class="results-note">
-      🧙 Papa sieht deine Ergebnisse im Dashboard und erstellt mit der KI deinen persönlichen Übungsplan.
-    </div>
-    <a href="/learn" class="btn-home">🏠 Zur Startseite</a>
+    <!-- ── KI-Auswertungs-Box ── -->
+    <?php if (($analysisStatus ?? 'pending') === 'done'): ?>
+      <div class="analysis-box done">
+        <span class="analysis-icon">✅</span>
+        <div class="analysis-title">Auswertung abgeschlossen!</div>
+        <div class="analysis-sub">Papa kann deinen Lernplan jetzt im Dashboard bestätigen.</div>
+      </div>
+    <?php else: ?>
+      <div class="analysis-box pending" id="analysis-box">
+        <span class="analysis-icon" id="analysis-icon">🔍</span>
+        <div class="analysis-title" id="analysis-title">KI-Auswertung starten</div>
+        <div class="analysis-sub"   id="analysis-sub">
+          Die KI analysiert deine Antworten und erstellt einen Lernplan für Papa.
+          Das dauert ca. 20–30 Sekunden.
+        </div>
+        <button class="btn-analyze" id="btn-analyze" type="button">
+          🤖 Jetzt auswerten lassen
+        </button>
+      </div>
+    <?php endif; ?>
+
+    <a href="/learn" class="btn-home" id="btn-home" style="display:none">🏠 Zur Startseite</a>
   </div>
 </div>
+
+<script>
+(function() {
+  var testId   = <?= (int)($test['id'] ?? 0) ?>;
+  var csrf     = <?= json_encode($csrfToken) ?>;
+  var btn      = document.getElementById('btn-analyze');
+  var box      = document.getElementById('analysis-box');
+  var icon     = document.getElementById('analysis-icon');
+  var title    = document.getElementById('analysis-title');
+  var sub      = document.getElementById('analysis-sub');
+  var homeBtn  = document.getElementById('btn-home');
+
+  if (!btn) return; // already done
+
+  btn.addEventListener('click', function() {
+    btn.disabled = true;
+    box.className = 'analysis-box running';
+    icon.innerHTML = '<span class="analysis-spinner"></span>';
+    title.textContent = 'Auswertung läuft…';
+    sub.textContent   = 'Die KI analysiert deine Antworten. Bitte warten…';
+
+    fetch('/learn/test/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csrf_token: csrf, test_id: testId }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success || data.already_done) {
+          box.className     = 'analysis-box done';
+          icon.textContent  = '✅';
+          title.textContent = 'Auswertung abgeschlossen!';
+          sub.textContent   = data.message || 'Papa kann deinen Lernplan jetzt im Dashboard bestätigen.';
+          btn.remove();
+          if (homeBtn) homeBtn.style.display = 'inline-block';
+        } else {
+          box.className     = 'analysis-box error';
+          icon.textContent  = '❌';
+          title.textContent = 'Auswertung fehlgeschlagen';
+          sub.textContent   = data.message || 'Bitte Papa bitten, die Auswertung manuell zu starten.';
+          btn.disabled      = false;
+          btn.textContent   = '🔄 Erneut versuchen';
+          if (homeBtn) homeBtn.style.display = 'inline-block';
+        }
+      })
+      .catch(function() {
+        box.className     = 'analysis-box error';
+        icon.textContent  = '❌';
+        title.textContent = 'Netzwerkfehler';
+        sub.textContent   = 'Bitte Seite neu laden oder Papa bitten, die Auswertung manuell zu starten.';
+        btn.disabled      = false;
+        btn.textContent   = '🔄 Erneut versuchen';
+        if (homeBtn) homeBtn.style.display = 'inline-block';
+      });
+  });
+})();
+</script>
 
 <?php endif; /* viewState */ ?>
 

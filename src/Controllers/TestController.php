@@ -446,6 +446,11 @@ class TestController
         $sectionsStmt->execute([$testId]);
         $sectionResults = $sectionsStmt->fetchAll();
 
+        // Analyse-Status: pending | done
+        $resultCount = db()->prepare("SELECT COUNT(*) FROM test_results WHERE test_id=?");
+        $resultCount->execute([$testId]);
+        $analysisStatus = ((int)$resultCount->fetchColumn() > 0) ? 'done' : 'pending';
+
         $theme     = self::loadTheme($_SESSION['theme'] ?? 'minecraft');
         $viewState = 'results';
         $section   = null;

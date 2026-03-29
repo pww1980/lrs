@@ -131,6 +131,66 @@ match (true) {
             (new \App\Controllers\WizardController())->handle();
         })(),
 
+    // Superadmin System-Seite
+    $uri === '/admin/system'
+        => (function () {
+            \App\Helpers\Auth::requireRole('superadmin');
+            require BASE_DIR . '/src/Views/admin/system.php';
+        })(),
+
+    // Admin anlegen (POST, Superadmin)
+    $uri === '/admin/system/create-admin' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('superadmin');
+            \App\Helpers\Auth::verifyCsrf();
+
+            $username    = trim($_POST['username']         ?? '');
+            $displayName = trim($_POST['display_name']     ?? '');
+            $password    = $_POST['password']              ?? '';
+            $passwordConf= $_POST['password_confirm']      ?? '';
+
+            $errors = [];
+            if ($username === '' || !preg_match('/^[a-zA-Z0-9_\-]{3,50}$/', $username)) {
+                $errors[] = 'Benutzername: 3–50 Zeichen, nur Buchstaben, Ziffern, _ und -.';
+            } else {
+                $taken = db()->prepare('SELECT COUNT(*) FROM users WHERE username = ?');
+                $taken->execute([$username]);
+                if ((int)$taken->fetchColumn() > 0) {
+                    $errors[] = 'Benutzername "' . htmlspecialchars($username) . '" ist bereits vergeben.';
+                }
+            }
+            if ($displayName === '') $errors[] = 'Anzeigename ist erforderlich.';
+            if (strlen($password) < 6) $errors[] = 'Passwort mind. 6 Zeichen.';
+            if ($password !== $passwordConf) $errors[] = 'Passwörter stimmen nicht überein.';
+
+            if (!empty($errors)) {
+                $_SESSION['system_errors'] = $errors;
+                redirect('/admin/system');
+            }
+
+            db()->prepare(
+                'INSERT INTO users (username, display_name, password_hash, role, active)
+                 VALUES (?, ?, ?, \'admin\', 1)'
+            )->execute([$username, $displayName, password_hash($password, PASSWORD_BCRYPT)]);
+
+            $_SESSION['system_success'] = "✅ Admin \"$displayName\" wurde angelegt.";
+            redirect('/admin/system');
+        })(),
+
+    // Admin sperren/aktivieren (POST, Superadmin)
+    $uri === '/admin/system/toggle-admin' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('superadmin');
+            \App\Helpers\Auth::verifyCsrf();
+            $adminId = (int)($_POST['admin_id'] ?? 0);
+            if ($adminId > 0) {
+                db()->prepare(
+                    'UPDATE users SET active = CASE WHEN active=1 THEN 0 ELSE 1 END WHERE id=? AND role=\'admin\''
+                )->execute([$adminId]);
+            }
+            redirect('/admin/system');
+        })(),
+
     // Admin Dashboard
     str_starts_with($uri, '/admin/dashboard')
         => \App\Controllers\DashboardController::show(),

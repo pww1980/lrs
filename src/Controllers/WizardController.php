@@ -49,14 +49,7 @@ class WizardController
     {
         Auth::requireRole('admin', 'superadmin');
 
-        // Guard: deaktivieren sobald ein Kind existiert
-        $childCount = (int) db()->query(
-            "SELECT COUNT(*) FROM users WHERE role = 'child'"
-        )->fetchColumn();
-
-        if ($childCount > 0) {
-            redirect('/admin/dashboard');
-        }
+        // (kein globaler childCount-Guard — mehrere Kinder sind erlaubt)
 
         // Session initialisieren
         if (!isset($_SESSION['wizard'])) {

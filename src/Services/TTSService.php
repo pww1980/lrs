@@ -84,6 +84,66 @@ class TTSService
     }
 
     /**
+     * Wie synthesize(), aber mit Disk-Cache unter data/tts_cache/.
+     *
+     * Beim ersten Aufruf: API → Datei speichern → zurückgeben.
+     * Ab dem zweiten Aufruf: Datei direkt lesen (kein API-Call).
+     *
+     * Cache-Key: md5(text|speed|voice|provider)
+     */
+    public function synthesizeCached(string $text, ?string $speed = null): ?array
+    {
+        if ($this->provider === 'browser') {
+            return null;
+        }
+
+        $text = trim($text);
+        if ($text === '') {
+            return null;
+        }
+
+        $voice    = $this->voice;
+        $speedKey = $speed ?? $this->speedSetting;
+        $ext      = $this->provider === 'google_tts' ? 'ogg' : 'mp3';
+        $mime     = $this->provider === 'google_tts' ? 'audio/ogg' : 'audio/mpeg';
+
+        $cacheKey  = md5($text . '|' . $speedKey . '|' . $voice . '|' . $this->provider);
+        $cacheDir  = DATA_DIR . '/tts_cache';
+        $cachePath = $cacheDir . '/' . $cacheKey . '.' . $ext;
+
+        // Cache-Treffer
+        if (file_exists($cachePath)) {
+            return ['audio' => file_get_contents($cachePath), 'mime' => $mime, 'cached' => true];
+        }
+
+        // API aufrufen
+        $result = $this->synthesize($text, $voice, $speed);
+        if ($result) {
+            if (!is_dir($cacheDir)) {
+                mkdir($cacheDir, 0750, true);
+            }
+            file_put_contents($cachePath, $result['audio']);
+            $result['cached'] = false;
+        }
+        return $result;
+    }
+
+    /**
+     * Cache-Pfad für einen Text (ohne API-Call).
+     * Gibt null zurück wenn Datei noch nicht gecacht ist.
+     */
+    public function getCachePath(string $text, string $speed = 'normal'): ?string
+    {
+        if ($this->provider === 'browser') {
+            return null;
+        }
+        $ext      = $this->provider === 'google_tts' ? 'ogg' : 'mp3';
+        $cacheKey = md5(trim($text) . '|' . $speed . '|' . $this->voice . '|' . $this->provider);
+        $path     = DATA_DIR . '/tts_cache/' . $cacheKey . '.' . $ext;
+        return file_exists($path) ? $path : null;
+    }
+
+    /**
      * Gibt true zurück wenn Browser Web Speech API verwendet wird.
      */
     public function isBrowserTTS(): bool

@@ -199,6 +199,66 @@ match (true) {
     preg_match('#^/admin/report/(\d+)$#', $uri, $m)
         => \App\Controllers\ReportController::show((int)$m[1]),
 
+    // TTS-Cache vorwärmen (AJAX GET, Admin)
+    $uri === '/admin/tts/warm' && $method === 'GET'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            header('Content-Type: application/json');
+
+            $adminId = (int)$_SESSION['user_id'];
+            $offset  = max(0, (int)($_GET['offset'] ?? 0));
+            $limit   = 5;
+            $speeds  = ['normal', 'slow'];
+
+            // Alle aktiven Wörter zählen
+            $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
+
+            // Batch laden
+            $stmt = db()->prepare("SELECT id, word FROM words WHERE active=1 ORDER BY id LIMIT ? OFFSET ?");
+            $stmt->execute([$limit, $offset]);
+            $words = $stmt->fetchAll();
+
+            $done    = 0;
+            $errors  = 0;
+            $skipped = 0;
+
+            try {
+                $tts = new \App\Services\TTSService($adminId);
+                if ($tts->isBrowserTTS()) {
+                    echo json_encode(['done' => $total, 'total' => $total, 'skipped' => $total,
+                                      'errors' => 0, 'provider' => 'browser']);
+                    exit;
+                }
+
+                foreach ($words as $word) {
+                    foreach ($speeds as $speed) {
+                        try {
+                            $result = $tts->synthesizeCached($word['word'], $speed);
+                            if ($result) {
+                                $done += ($result['cached'] ?? false) ? 0 : 1;
+                                $skipped += ($result['cached'] ?? false) ? 1 : 0;
+                            }
+                        } catch (\Throwable) {
+                            $errors++;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                echo json_encode(['error' => $e->getMessage()]);
+                exit;
+            }
+
+            echo json_encode([
+                'offset'  => $offset + $limit,
+                'total'   => $total,
+                'done'    => $done,
+                'skipped' => $skipped,
+                'errors'  => $errors,
+                'finished' => ($offset + $limit) >= $total,
+            ]);
+            exit;
+        })(),
+
     // Plan bestätigen (AJAX POST)
     $uri === '/admin/plan/approve' && $method === 'POST'
         => \App\Controllers\DashboardController::approvePlan(),

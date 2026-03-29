@@ -37,16 +37,44 @@ function db(): PDO
 {
     static $pdo = null;
     if ($pdo === null) {
+        // Datenbank automatisch anlegen wenn noch nicht vorhanden
         if (!file_exists(DB_FILE)) {
-            // Datenbank noch nicht angelegt → zum Setup weiterleiten
-            // (wird vom Router behandelt)
-            return throw new RuntimeException('Datenbank nicht gefunden. Bitte migrate.php ausführen.');
+            $schemaFile = BASE_DIR . '/database/schema.sql';
+            if (!file_exists($schemaFile)) {
+                throw new RuntimeException('schema.sql nicht gefunden: ' . $schemaFile);
+            }
+
+            // /data-Verzeichnis anlegen
+            if (!is_dir(DATA_DIR)) {
+                mkdir(DATA_DIR, 0750, true);
+            }
+
+            // SQLite-Datei erstellen und Schema ausführen
+            $newPdo = new PDO('sqlite:' . DB_FILE);
+            $newPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $newPdo->exec('PRAGMA journal_mode = WAL;');
+            $newPdo->exec('PRAGMA foreign_keys = ON;');
+
+            $sql        = file_get_contents($schemaFile);
+            $statements = array_filter(
+                array_map('trim', explode(';', $sql)),
+                fn($s) => trim(preg_replace('/--[^\n]*/', '', $s)) !== ''
+            );
+            foreach ($statements as $stmt) {
+                $newPdo->exec($stmt);
+            }
+
+            $pdo = $newPdo;
+        } else {
+            $pdo = new PDO('sqlite:' . DB_FILE);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE,            PDO::ERRMODE_EXCEPTION);
+            $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            $pdo->exec('PRAGMA foreign_keys = ON;');
+            $pdo->exec('PRAGMA journal_mode = WAL;');
         }
-        $pdo = new PDO('sqlite:' . DB_FILE);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE,        PDO::ERRMODE_EXCEPTION);
+
+        // FETCH_ASSOC auch für die neue Verbindung setzen
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        $pdo->exec('PRAGMA foreign_keys = ON;');
-        $pdo->exec('PRAGMA journal_mode = WAL;');
     }
     return $pdo;
 }

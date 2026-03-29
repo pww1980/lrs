@@ -152,7 +152,33 @@ match (true) {
     $uri === '/learn/test' && $method === 'POST'
         => \App\Controllers\TestController::startTest(),
 
-    // ── Lernbereich (Kind-Startseite) ────────────────────────────────────
+    // ── Questlog (Abenteuermap) ──────────────────────────────────────────
+    $uri === '/learn/questlog' && $method === 'GET'
+        => \App\Controllers\SessionController::showQuestlog(),
+
+    // ── Übungseinheit ────────────────────────────────────────────────────
+
+    // TTS (GET, vor den anderen Session-Routen)
+    $uri === '/learn/session/tts' && $method === 'GET'
+        => \App\Controllers\SessionController::getTts(),
+
+    // Session starten (Form POST)
+    $uri === '/learn/session/start' && $method === 'POST'
+        => \App\Controllers\SessionController::startSession(),
+
+    // Antwort einreichen (AJAX POST)
+    $uri === '/learn/session/answer' && $method === 'POST'
+        => \App\Controllers\SessionController::submitAnswer(),
+
+    // Session abschließen (AJAX POST)
+    $uri === '/learn/session/complete' && $method === 'POST'
+        => \App\Controllers\SessionController::completeSession(),
+
+    // Session-Hauptseite (GET)
+    $uri === '/learn/session' && $method === 'GET'
+        => \App\Controllers\SessionController::show(),
+
+    // ── Lernbereich (Kind-Startseite / Smart-Redirect) ───────────────────
     str_starts_with($uri, '/learn')
         => (function () {
             \App\Helpers\Auth::requireRole('child');

@@ -46,7 +46,7 @@ $formatLabel = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle) ?></title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     /* ── Dashboard-spezifische Styles ── */

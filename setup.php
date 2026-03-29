@@ -93,7 +93,7 @@ function renderError(string $title, string $body): string
     return <<<HTML
     <!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
     <title>Fehler — Setup</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/public/css/app.css">
     <style>.cmd{display:block;background:#263238;color:#aed581;padding:.6rem 1rem;border-radius:6px;margin:.75rem 0;font-family:monospace;font-size:.875rem;word-break:break-all}</style>
     </head><body class="setup-page">
     <div class="setup-card" style="text-align:left">
@@ -110,7 +110,7 @@ function renderError(string $title, string $body): string
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ersteinrichtung — <?= htmlspecialchars(APP_NAME) ?></title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css">
   <style>
     .setup-page {
       display: flex;

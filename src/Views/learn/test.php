@@ -53,7 +53,7 @@ $sections = $progress['sections'] ?? [];
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Einstufungstest — <?= htmlspecialchars(APP_NAME) ?></title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css">
   <style>
     /* ── Test-spezifische Styles ── */
     :root {
@@ -727,7 +727,7 @@ const TEST_DATA = {
   flavorWrong:   <?= json_encode($theme['flavor_texts']['wrong']   ?? 'Noch einmal versuchen!') ?>,
 };
 </script>
-<script src="/js/test.js"></script>
+<script src="/public/js/test.js"></script>
 
 <?php /* ========================================================
        ERGEBNIS-SCREEN

@@ -46,7 +46,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $isStaticPath = str_starts_with($uri, '/public/')
              || str_starts_with($uri, '/css/')
-             || str_starts_with($uri, '/js/');
+             || str_starts_with($uri, '/js/')
+             || str_starts_with($uri, '/themes/');
 
 if (!$isStaticPath) {
     try {
@@ -72,7 +73,7 @@ function showPermissionsError(string $dir): never
     echo <<<HTML
     <!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
     <title>Einrichtung erforderlich</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/public/css/app.css">
     <style>
       body { background:#f5f5f5; display:flex; align-items:center; justify-content:center; min-height:100vh; }
       .box { background:#fff; border-radius:12px; padding:2rem; max-width:560px; box-shadow:0 4px 16px rgba(0,0,0,.1); }
@@ -353,7 +354,7 @@ match (true) {
         http_response_code(404);
         echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
               <title>Seite nicht gefunden</title>
-              <link rel="stylesheet" href="/css/app.css">
+              <link rel="stylesheet" href="/public/css/app.css">
               </head><body><div class="container">
               <h1>404 — Seite nicht gefunden</h1>
               <p><a href="/">Zurück zur Startseite</a></p>

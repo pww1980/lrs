@@ -1,0 +1,133 @@
+{
+  "language": "de",
+  "federal_state": "Bayern",
+  "school_type": "Grundschule",
+  "grades": "3/4",
+  "grade_min": 3,
+  "grade_max": 4,
+  "source": "LehrplanPLUS Bayern 2014",
+  "url": "https://www.lehrplanplus.bayern.de/fachlehrplan/grundschule/3/deutsch",
+  "issued": "2014-05",
+  "categories": {
+    "A1": {
+      "label": "Auslautverhärtung",
+      "block": "A",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben gängige Schreibungen, z. B. Wörter mit Auslautverhärtung, routiniert richtig. Sie nutzen die Strategie der Wortverlängerung, um die Schreibung von Wörtern mit Auslautverhärtung abzuleiten: Sie verbinden ein- und zweisilbige Wortformen miteinander (z. B. Hund – Hunde, Zug – Züge, Rad – Räder), um die korrekte Schreibung des Auslauts zu erschließen.",
+      "curriculum_principle": "phonologisches Prinzip / morphologisches Prinzip",
+      "examples_official": ["Hund", "Zug", "Rad", "Weg", "Wald", "Kind", "Bild", "Lied"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "A2": {
+      "label": "Vokallänge (kurz/lang)",
+      "block": "A",
+      "curriculum_text": "Die Schülerinnen und Schüler nutzen das silbische Prinzip, um Vokallänge zu unterscheiden. Sie erkennen anhand der Silbenstruktur, ob ein Vokal kurz oder lang gesprochen wird (offene vs. geschlossene Silbe). Sie üben Wörter mit kurzem und langem Vokal und schreiben diese routiniert richtig (z. B. Miete – Mitte, Bahn – Bann).",
+      "curriculum_principle": "silbisches Prinzip",
+      "examples_official": ["Miete", "Mitte", "offen", "Ofen", "Hüfte", "Blume", "Bahn", "Name"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "A3": {
+      "label": "Konsonantenhäufungen",
+      "block": "A",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Wörter mit Konsonantenhäufungen (Konsonantenverbindungen am Silbenanfang und Silbenende) richtig. Sie wenden phonologische und silbische Strategien an, um komplexe Konsonantenverbindungen lautgetreu zu verschriften (z. B. Strumpf, Herbst, Angst). Sie gliedern Wörter in Silben, um die Schreibung zu erschließen.",
+      "curriculum_principle": "phonologisches Prinzip / silbisches Prinzip",
+      "examples_official": ["Strumpf", "Herbst", "Angst", "Pflanze", "Schrift", "Blitz", "Kraft", "Zwerg"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "B1": {
+      "label": "Doppelkonsonanten",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Wörter mit Doppelkonsonanten (ll, mm, nn, rr, ss, tt u. a.) richtig. Sie wenden das silbische Prinzip an: Nach einem kurzen betonten Vokal in einer zweisilbigen Form steht Konsonantenverdoppelung. Sie üben diese Schreibungen am Grundwortschatz der Jahrgangsstufen 3 und 4 routiniert ein.",
+      "curriculum_principle": "silbisches Prinzip",
+      "examples_official": ["Mutter", "Wasser", "Bett", "Ball", "Tonne", "Messer", "Kissen", "Latte"],
+      "grade_focus": "ab Klasse 3"
+    },
+    "B2": {
+      "label": "ck und tz",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Wörter mit ck und tz nach kurzem Vokal richtig. Sie wenden die Regel an, dass k nach kurzem betonten Vokal als ck und z nach kurzem betonten Vokal als tz geschrieben wird. Sie unterscheiden diese Schreibweisen von einfachem k bzw. z nach langem Vokal oder Konsonant.",
+      "curriculum_principle": "silbisches Prinzip / Regelwissen",
+      "examples_official": ["backen", "Brücke", "Katze", "Mütze", "Ecke", "Stück", "Netz", "Platz"],
+      "grade_focus": "ab Klasse 3"
+    },
+    "B3": {
+      "label": "ie / ih / i (langer i-Laut)",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben den langen i-Laut in seiner häufigsten Schreibweise ie routiniert richtig (z. B. Tier, Liebe, Brief). Sie kennen weitere Schreibweisen des langen i-Lauts (ih: ihm, ihn, ihr; i ohne Dehnungszeichen: Igel, Kino) und üben die häufigsten Wörter aus dem Grundwortschatz. Sie nutzen Wörterbücher und Lernwörterlisten zur Absicherung.",
+      "curriculum_principle": "Regelwissen / orthografisches Prinzip",
+      "examples_official": ["Tier", "Brief", "Liebe", "ihm", "ihr", "Igel", "Bibel", "Kino"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "B4": {
+      "label": "Dehnungs-h",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben häufige Wörter mit Dehnungs-h (stummes h zur Kennzeichnung der Vokallänge) richtig. Sie lernen die gängigsten Wörter mit Dehnungs-h aus dem Grundwortschatz und wenden die Schreibung in geübten Wörtern sicher an (z. B. fahren, Stuhl, nehmen, Zahl). Da das Dehnungs-h keine regelhaft ableitbare Schreibung darstellt, üben sie diese Wörter als Sichtwortschatz ein.",
+      "curriculum_principle": "orthografisches Prinzip / Sichtwortschatz",
+      "examples_official": ["fahren", "Stuhl", "nehmen", "Zahl", "Stahl", "Pfahl", "Mehl", "Bahn"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "B5": {
+      "label": "sp und st (Anfangsgruppen)",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Wörter mit den Buchstabengruppen sp und st am Silbenanfang richtig. Sie wenden die Regel an, dass am Anfang einer betonten Silbe sch-Laut + p bzw. sch-Laut + t als sp bzw. st geschrieben wird. Sie üben diese Schreibung systematisch am Grundwortschatz ein.",
+      "curriculum_principle": "phonologisches Prinzip / Regelwissen",
+      "examples_official": ["Straße", "sprechen", "Stein", "spielen", "Stunde", "springen", "Stufe", "Spannung"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "C1": {
+      "label": "ä vs. e (Umlautableitung)",
+      "block": "C",
+      "curriculum_text": "Die Schülerinnen und Schüler nutzen das morphologische Prinzip, um Wörter mit ä korrekt zu schreiben. Sie leiten die Schreibung von ä aus verwandten Wörtern mit a ab (Wortfamilien-Strategie): Wenn ein Wort mit a in der Wortfamilie vorkommt, wird der Umlaut als ä geschrieben (z. B. Hände → Hand, Bäume → Baum). Sie unterscheiden ä von e in Wörtern ohne Ableitung.",
+      "curriculum_principle": "morphologisches Prinzip",
+      "examples_official": ["Hände", "Bäume", "Wälder", "Kälte", "Gäste", "Länder", "Väter", "Bäcker"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "C2": {
+      "label": "äu vs. eu (Umlautableitung)",
+      "block": "C",
+      "curriculum_text": "Die Schülerinnen und Schüler unterscheiden äu und eu durch Anwendung des morphologischen Prinzips. Sie schreiben äu, wenn ein verwandtes Wort mit au vorhanden ist (z. B. Häuser → Haus, Mäuse → Maus, Bäume → Baum). Lässt sich kein Stammwort mit au ableiten, wird eu geschrieben (z. B. Feuer, heute, Freude). Sie üben die häufigsten Wörter beider Gruppen aus dem Grundwortschatz.",
+      "curriculum_principle": "morphologisches Prinzip",
+      "examples_official": ["Häuser", "Mäuse", "Bäume", "Feuer", "heute", "Freude", "läuft", "Neugier"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "C3": {
+      "label": "dass / das (Konjunktion vs. Artikel)",
+      "block": "C",
+      "curriculum_text": "Die Schülerinnen und Schüler unterscheiden die Konjunktion dass von dem Artikel/Pronomen das. Sie wenden grammatische Probe-Strategien an: Das Artikel/Pronomen lässt sich durch dieses oder welches ersetzen (das schöne Buch → dieses schöne Buch), die Konjunktion dass hingegen nicht. Sie üben die korrekte Verwendung im Satzzusammenhang.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Ich weiß, dass er kommt.", "Das Buch liegt hier.", "Sie sagt, dass es stimmt.", "Das ist schön."],
+      "grade_focus": "Klasse 4"
+    },
+    "D1": {
+      "label": "Großschreibung: konkrete Nomen",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben konkrete Nomen (Bezeichnungen für Personen, Tiere, Dinge, Orte) routiniert groß. Sie erkennen Nomen anhand ihrer Bestimmbarkeit durch Artikel (der, die, das) und wenden die Großschreibungsregel sicher an. Sie üben die Großschreibung konkreter Nomen im Satzzusammenhang.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Fahrrad", "Hund", "Schule", "Baum", "Tisch", "Haus", "Blume", "Kind"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "D2": {
+      "label": "Großschreibung: abstrakte Nomen",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler erweitern ihre Kenntnisse der Großschreibung auf abstrakte Nomen (Bezeichnungen für nicht-greifbare Konzepte wie Gefühle, Eigenschaften, Zustände). Sie erkennen auch abstrakte Nomen als Nomen, indem sie den Artikel-Test anwenden (die Freundschaft, die Angst, die Hoffnung) und schreiben sie entsprechend groß.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Freundschaft", "Angst", "Hoffnung", "Liebe", "Mut", "Freude", "Glück", "Trauer"],
+      "grade_focus": "Klasse 3 und 4"
+    },
+    "D3": {
+      "label": "Großschreibung: Nominalisierungen",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben substantivierte Verben und Adjektive (Nominalisierungen) groß. Sie erkennen Nominalisierungen anhand des Artikels oder von Begleitern (das Laufen, das Essen, beim Spielen, das Schöne, das Beste). Sie üben die Großschreibung von Nominalisierungen mit Verben und Adjektiven im Satzzusammenhang.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["das Laufen", "das Essen", "beim Spielen", "das Schreiben", "das Schöne", "das Gute", "das Beste", "ein Neues"],
+      "grade_focus": "Klasse 4"
+    },
+    "D4": {
+      "label": "Großschreibung: Satzanfang",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben das erste Wort eines Satzes groß. Sie achten auch unter Schreibdruck (z. B. beim Schreiben längerer Texte oder Diktate) auf die konsequente Großschreibung am Satzanfang. Sie überprüfen eigene Texte auf diese Regel und korrigieren Fehler eigenständig.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Der Hund bellt.", "Heute regnet es.", "Wir gehen in die Schule.", "Ein Vogel fliegt hoch."],
+      "grade_focus": "Klasse 3 und 4"
+    }
+  }
+}

@@ -558,6 +558,71 @@ $formatLabel = [
     count($c['chart_data'][array_key_first($c['chart_data'])]['labels'] ?? []) >= 1
   );
   ?>
+  <!-- ══ TTS-CACHE VORWÄRMEN ══════════════════════════════════════════ -->
+  <section class="dash-section">
+    <div class="dash-section-title">🔊 TTS-Cache vorwärmen</div>
+    <p style="color:var(--color-muted);font-size:.9rem;margin-bottom:.75rem">
+      Generiert Audio-Dateien für alle Wörter im Voraus — danach startet der Test sofort ohne Ladepause.
+    </p>
+    <button class="btn btn-primary btn-sm" id="btn-tts-warm" type="button">▶ Jetzt vorwärmen</button>
+    <span id="tts-warm-status" style="margin-left:1rem;font-size:.9rem;color:var(--color-muted)"></span>
+    <div id="tts-warm-bar" style="display:none;margin-top:.75rem;background:#e0e0e0;border-radius:4px;height:8px;max-width:400px">
+      <div id="tts-warm-fill" style="height:8px;background:#4caf50;border-radius:4px;width:0%;transition:width .3s"></div>
+    </div>
+    <script>
+    (function () {
+      var btn    = document.getElementById('btn-tts-warm');
+      var status = document.getElementById('tts-warm-status');
+      var bar    = document.getElementById('tts-warm-bar');
+      var fill   = document.getElementById('tts-warm-fill');
+      var total  = 0;
+      var processed = 0;
+
+      function warmBatch(offset) {
+        fetch('<?= url('/admin/tts/warm') ?>&offset=' + offset)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.error) {
+              status.textContent = '⚠ ' + data.error;
+              btn.disabled = false;
+              return;
+            }
+            if (data.provider === 'browser') {
+              status.textContent = '✓ Browser-TTS benötigt keinen Cache.';
+              btn.disabled = false;
+              return;
+            }
+            total = data.total * 2; // normal + slow
+            processed += (data.done + data.skipped) * 2;
+            var pct = total > 0 ? Math.min(100, Math.round(processed / total * 100)) : 100;
+            fill.style.width = pct + '%';
+            status.textContent = Math.round(pct) + '% (' + data.offset + '/' + (data.total) + ' Wörter)';
+
+            if (data.finished) {
+              status.textContent = '✅ Fertig! Alle Wörter gecacht.';
+              btn.disabled = false;
+            } else {
+              warmBatch(data.offset);
+            }
+          })
+          .catch(function() {
+            status.textContent = '⚠ Fehler beim Aufwärmen.';
+            btn.disabled = false;
+          });
+      }
+
+      btn.addEventListener('click', function() {
+        btn.disabled = true;
+        processed = 0;
+        bar.style.display = '';
+        fill.style.width  = '0%';
+        status.textContent = 'Läuft…';
+        warmBatch(0);
+      });
+    })();
+    </script>
+  </section>
+
   <?php if (!empty($withCharts)): ?>
   <section class="dash-section">
     <div class="dash-section-title">📈 Fortschrittsgrafiken</div>

@@ -232,7 +232,7 @@ class TestController
                 exit;
             }
 
-            $result = $tts->synthesize($text, null, $speed);
+            $result = $tts->synthesizeCached($text, $speed);
             if ($result) {
                 header('Content-Type: ' . $result['mime']);
                 header('Cache-Control: no-store, no-cache');

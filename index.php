@@ -118,7 +118,36 @@ match (true) {
             require __DIR__ . '/src/Views/admin/system.php';
         })(),
 
-    // Lernbereich
+    // ── Einstufungstest ──────────────────────────────────────────────────
+
+    // TTS-Audio (GET, vor den POST-Routen damit kein Konflikt)
+    $uri === '/learn/test/tts' && $method === 'GET'
+        => \App\Controllers\TestController::getTts(),
+
+    // Antwort einreichen (AJAX POST)
+    $uri === '/learn/test/answer' && $method === 'POST'
+        => \App\Controllers\TestController::submitAnswer(),
+
+    // Sektion abschließen (AJAX POST)
+    $uri === '/learn/test/section-complete' && $method === 'POST'
+        => \App\Controllers\TestController::completeSection(),
+
+    // Test pausieren (AJAX POST)
+    $uri === '/learn/test/pause' && $method === 'POST'
+        => \App\Controllers\TestController::pauseTest(),
+
+    // Ergebnisseite (GET)
+    $uri === '/learn/test/results' && $method === 'GET'
+        => \App\Controllers\TestController::showResults(),
+
+    // Test-Hauptseite: GET zeigt, POST startet
+    $uri === '/learn/test' && $method === 'GET'
+        => \App\Controllers\TestController::show(),
+
+    $uri === '/learn/test' && $method === 'POST'
+        => \App\Controllers\TestController::startTest(),
+
+    // ── Lernbereich (Kind-Startseite) ────────────────────────────────────
     str_starts_with($uri, '/learn')
         => (function () {
             \App\Helpers\Auth::requireRole('child');

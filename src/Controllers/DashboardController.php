@@ -331,6 +331,61 @@ class DashboardController
             ");
             $statsStmt->execute([$cid]);
             $child['stats'] = $statsStmt->fetch();
+
+            // Chart-Daten: Fehlerrate pro Kategorie über alle abgeschlossenen Tests
+            // Gibt [{test_date, category, error_rate}] zurück, chronologisch
+            $chartStmt = db()->prepare("
+                SELECT date(t.completed_at)  AS test_date,
+                       tr.block,
+                       tr.category,
+                       tr.error_rate
+                FROM test_results tr
+                JOIN tests t ON tr.test_id = t.id
+                WHERE t.user_id = ? AND t.status = 'completed'
+                ORDER BY t.completed_at ASC
+            ");
+            $chartStmt->execute([$cid]);
+            $chartRows = $chartStmt->fetchAll();
+
+            // In JS-taugliche Struktur umwandeln:
+            // chart_data[block] = {labels:[dates], datasets:[{label:cat, data:[rates]}]}
+            $byBlock = [];
+            $testDates = []; // alle Test-Daten in Reihenfolge (dedupliziert)
+            $catData   = []; // [cat => [test_date => error_rate]]
+
+            foreach ($chartRows as $row) {
+                $testDates[$row['test_date']] = true;
+                $catData[$row['category']][$row['test_date']] = round((float)$row['error_rate'] * 100, 1);
+                $byBlock[$row['block']][$row['category']] = true;
+            }
+            $testDates = array_keys($testDates);
+
+            $chartData = [];
+            foreach ($byBlock as $block => $cats) {
+                $datasets = [];
+                $palette  = ['#4caf50','#2196f3','#ff9800','#e91e63','#9c27b0'];
+                $pi = 0;
+                foreach ($cats as $cat => $_) {
+                    $points = [];
+                    foreach ($testDates as $d) {
+                        $points[] = $catData[$cat][$d] ?? null;
+                    }
+                    $datasets[] = [
+                        'label'           => $cat,
+                        'data'            => $points,
+                        'borderColor'     => $palette[$pi % count($palette)],
+                        'backgroundColor' => $palette[$pi % count($palette)] . '22',
+                        'tension'         => 0.3,
+                        'fill'            => false,
+                    ];
+                    $pi++;
+                }
+                $chartData[$block] = [
+                    'labels'   => $testDates,
+                    'datasets' => $datasets,
+                ];
+            }
+            $child['chart_data'] = $chartData;
         }
         unset($child);
 

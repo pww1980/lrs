@@ -47,6 +47,7 @@ $formatLabel = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle) ?></title>
   <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     /* ── Dashboard-spezifische Styles ── */
     .dash-section        { margin-bottom: 2.5rem; }
@@ -543,6 +544,159 @@ $formatLabel = [
         — Plan aktiviert am <?= date('d.m.Y', strtotime($child['active_plan']['activated_at'] ?? 'now')) ?>
       </div>
     </div>
+    <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       5. FORTSCHRITTSGRAFIKEN (Chart.js)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <?php
+  $withCharts = array_filter($children, fn($c) =>
+    !empty($c['chart_data']) &&
+    // Mindestens 2 Test-Datenpunkte für eine sinnvolle Grafik
+    count($c['chart_data'][array_key_first($c['chart_data'])]['labels'] ?? []) >= 1
+  );
+  ?>
+  <?php if (!empty($withCharts)): ?>
+  <section class="dash-section">
+    <div class="dash-section-title">📈 Fortschrittsgrafiken</div>
+
+    <?php foreach ($withCharts as $child):
+      $cid = (int)$child['id'];
+      $chartData = $child['chart_data'];
+      $hasMultiplePoints = max(array_map(
+        fn($b) => count($b['labels']),
+        array_values($chartData)
+      )) > 1;
+    ?>
+    <div style="margin-bottom:2rem">
+      <h3 style="font-size:.95rem;color:#444;margin-bottom:1rem">
+        🧒 <?= htmlspecialchars($child['display_name']) ?>
+        <?php if (!$hasMultiplePoints): ?>
+          <span style="font-size:.8rem;font-weight:normal;color:#999">
+            (Erst nach dem zweiten Test verfügbar)
+          </span>
+        <?php endif; ?>
+      </h3>
+
+      <?php if ($hasMultiplePoints): ?>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
+        <?php foreach (['A','B','C','D'] as $block):
+          if (!isset($chartData[$block])) continue;
+          $blockNames = ['A'=>'Block A — Laut/Buchstaben','B'=>'Block B — Regelwissen','C'=>'Block C — Ableitung','D'=>'Block D — Groß-/Klein'];
+        ?>
+        <div style="background:#fff;border:1px solid var(--color-border);border-radius:8px;padding:1rem">
+          <div style="font-size:.8rem;font-weight:700;color:var(--color-muted);margin-bottom:.5rem">
+            <?= htmlspecialchars($blockNames[$block] ?? $block) ?>
+          </div>
+          <div style="position:relative;height:180px">
+            <canvas id="chart-<?= $cid ?>-<?= $block ?>"></canvas>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+
+      <?php else: ?>
+      <!-- Noch kein Zeitverlauf — zeige Balkendiagramm des aktuellen Stands -->
+      <div style="background:#fff;border:1px solid var(--color-border);border-radius:8px;padding:1rem">
+        <div style="font-size:.8rem;color:#999;margin-bottom:.75rem">Aktueller Stand nach Einstufungstest</div>
+        <canvas id="chart-current-<?= $cid ?>" style="max-height:200px"></canvas>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Chart-Daten für JS -->
+    <script>
+    (function() {
+      var chartData = <?= json_encode($chartData, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+      var cid = <?= $cid ?>;
+      var hasMulti = <?= $hasMultiplePoints ? 'true' : 'false' ?>;
+
+      var lineOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return ctx.dataset.label + ': ' + ctx.parsed.y + '%';
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            min: 0, max: 100,
+            ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } },
+            title: { display: true, text: 'Fehlerrate', font: { size: 10 } }
+          },
+          x: { ticks: { font: { size: 10 } } }
+        }
+      };
+
+      if (hasMulti) {
+        ['A','B','C','D'].forEach(function(block) {
+          var d = chartData[block];
+          if (!d) return;
+          var canvas = document.getElementById('chart-' + cid + '-' + block);
+          if (!canvas) return;
+          new Chart(canvas, { type: 'line', data: d, options: lineOpts });
+        });
+      } else {
+        // Balkendiagramm: alle Kategorien aus allen Blöcken
+        var labels = [], values = [], colors = [];
+        var palette = {
+          'none':     '#4caf50',
+          'mild':     '#ffc107',
+          'moderate': '#ff9800',
+          'severe':   '#f44336'
+        };
+        var severityFromRate = function(r) {
+          if (r < 10) return 'none';
+          if (r < 30) return 'mild';
+          if (r < 60) return 'moderate';
+          return 'severe';
+        };
+        ['A','B','C','D'].forEach(function(block) {
+          var d = chartData[block];
+          if (!d) return;
+          d.datasets.forEach(function(ds) {
+            labels.push(ds.label);
+            var val = ds.data[0] !== null ? ds.data[0] : 0;
+            values.push(val);
+            colors.push(palette[severityFromRate(val)]);
+          });
+        });
+        var canvas = document.getElementById('chart-current-' + cid);
+        if (canvas) {
+          new Chart(canvas, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Fehlerrate (%)',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 4,
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: function(c) { return c.parsed.y + '%'; } } }
+              },
+              scales: {
+                y: { min: 0, max: 100, ticks: { callback: function(v) { return v + '%'; } } }
+              }
+            }
+          });
+        }
+      }
+    })();
+    </script>
     <?php endforeach; ?>
   </section>
   <?php endif; ?>

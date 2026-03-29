@@ -48,16 +48,48 @@ $isStaticPath = str_starts_with($uri, '/public/')
              || str_starts_with($uri, '/css/')
              || str_starts_with($uri, '/js/');
 
-if ($uri !== '/setup' && !$isStaticPath) {
+if (!$isStaticPath) {
     try {
         $count = db()->query("SELECT COUNT(*) FROM users WHERE role = 'superadmin'")->fetchColumn();
-        if ((int)$count === 0) {
+        if ((int)$count === 0 && $uri !== '/setup') {
             redirect('/setup');
         }
-    } catch (\RuntimeException) {
-        // Datenbank noch nicht angelegt
-        redirect('/setup');
+    } catch (\RuntimeException $e) {
+        if (str_starts_with($e->getMessage(), 'PERMISSIONS_ERROR:')) {
+            $dir = substr($e->getMessage(), strlen('PERMISSIONS_ERROR:'));
+            showPermissionsError($dir);
+        }
+        // Andere RuntimeExceptions: Datenbank-Problem → Setup
+        if ($uri !== '/setup') {
+            redirect('/setup');
+        }
     }
+}
+
+function showPermissionsError(string $dir): never
+{
+    http_response_code(500);
+    echo <<<HTML
+    <!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>Einrichtung erforderlich</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+      body { background:#f5f5f5; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+      .box { background:#fff; border-radius:12px; padding:2rem; max-width:560px; box-shadow:0 4px 16px rgba(0,0,0,.1); }
+      h2 { color:#c62828; margin-top:0 }
+      code { background:#f5f5f5; padding:.2rem .5rem; border-radius:4px; font-size:.95rem; word-break:break-all }
+      .cmd { background:#263238; color:#aed581; padding:1rem; border-radius:8px; font-family:monospace; margin:.75rem 0; font-size:.9rem; overflow-x:auto }
+    </style>
+    </head><body><div class="box">
+      <h2>⚠ Schreibrechte fehlen</h2>
+      <p>Der Webserver kann die Datenbank nicht anlegen, weil das Verzeichnis
+         <code>{$dir}</code> nicht beschreibbar ist.</p>
+      <p>Bitte einmalig per SSH ausführen:</p>
+      <div class="cmd">chown -R www-data:www-data {$dir}</div>
+      <p>Danach diese Seite neu laden.</p>
+    </div></body></html>
+    HTML;
+    exit;
 }
 
 // ── Routing ───────────────────────────────────────────────────────────
@@ -97,6 +129,66 @@ match (true) {
     str_starts_with($uri, '/setup/wizard')
         => (function () {
             (new \App\Controllers\WizardController())->handle();
+        })(),
+
+    // Superadmin System-Seite
+    $uri === '/admin/system'
+        => (function () {
+            \App\Helpers\Auth::requireRole('superadmin');
+            require BASE_DIR . '/src/Views/admin/system.php';
+        })(),
+
+    // Admin anlegen (POST, Superadmin)
+    $uri === '/admin/system/create-admin' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('superadmin');
+            \App\Helpers\Auth::verifyCsrf();
+
+            $username    = trim($_POST['username']         ?? '');
+            $displayName = trim($_POST['display_name']     ?? '');
+            $password    = $_POST['password']              ?? '';
+            $passwordConf= $_POST['password_confirm']      ?? '';
+
+            $errors = [];
+            if ($username === '' || !preg_match('/^[a-zA-Z0-9_\-]{3,50}$/', $username)) {
+                $errors[] = 'Benutzername: 3–50 Zeichen, nur Buchstaben, Ziffern, _ und -.';
+            } else {
+                $taken = db()->prepare('SELECT COUNT(*) FROM users WHERE username = ?');
+                $taken->execute([$username]);
+                if ((int)$taken->fetchColumn() > 0) {
+                    $errors[] = 'Benutzername "' . htmlspecialchars($username) . '" ist bereits vergeben.';
+                }
+            }
+            if ($displayName === '') $errors[] = 'Anzeigename ist erforderlich.';
+            if (strlen($password) < 6) $errors[] = 'Passwort mind. 6 Zeichen.';
+            if ($password !== $passwordConf) $errors[] = 'Passwörter stimmen nicht überein.';
+
+            if (!empty($errors)) {
+                $_SESSION['system_errors'] = $errors;
+                redirect('/admin/system');
+            }
+
+            db()->prepare(
+                'INSERT INTO users (username, display_name, password_hash, role, active)
+                 VALUES (?, ?, ?, \'admin\', 1)'
+            )->execute([$username, $displayName, password_hash($password, PASSWORD_BCRYPT)]);
+
+            $_SESSION['system_success'] = "✅ Admin \"$displayName\" wurde angelegt.";
+            redirect('/admin/system');
+        })(),
+
+    // Admin sperren/aktivieren (POST, Superadmin)
+    $uri === '/admin/system/toggle-admin' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('superadmin');
+            \App\Helpers\Auth::verifyCsrf();
+            $adminId = (int)($_POST['admin_id'] ?? 0);
+            if ($adminId > 0) {
+                db()->prepare(
+                    'UPDATE users SET active = CASE WHEN active=1 THEN 0 ELSE 1 END WHERE id=? AND role=\'admin\''
+                )->execute([$adminId]);
+            }
+            redirect('/admin/system');
         })(),
 
     // Admin Dashboard

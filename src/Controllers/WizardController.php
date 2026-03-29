@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Helpers\Auth;
 use App\Services\EncryptionService;
-use App\Services\WordGeneratorService;
 
 /**
  * Setup-Wizard: 5 Schritte zur Ersteinrichtung eines Kind-Accounts.
@@ -49,14 +48,7 @@ class WizardController
     {
         Auth::requireRole('admin', 'superadmin');
 
-        // Guard: deaktivieren sobald ein Kind existiert
-        $childCount = (int) db()->query(
-            "SELECT COUNT(*) FROM users WHERE role = 'child'"
-        )->fetchColumn();
-
-        if ($childCount > 0) {
-            redirect('/admin/dashboard');
-        }
+        // (kein globaler childCount-Guard — mehrere Kinder sind erlaubt)
 
         // Session initialisieren
         if (!isset($_SESSION['wizard'])) {
@@ -361,39 +353,21 @@ class WizardController
             redirect('/setup/wizard');
         }
 
-        // Wortgenerierung anstoßen (nach DB-Commit, nicht Teil der Transaktion)
-        $wordReport = null;
-        try {
-            $gen        = new WordGeneratorService($childId);
-            $wordReport = $gen->ensureWords();
-        } catch (\Throwable $e) {
-            error_log("WordGeneratorService Fehler nach Wizard: " . $e->getMessage());
-        }
-
         // Wizard-Session aufräumen
         unset($_SESSION['wizard']);
 
         // Flash-Nachricht für Dashboard
         $name = htmlspecialchars($d1['display_name']);
 
-        $wordInfo = '';
-        if ($wordReport !== null) {
-            if ($wordReport['new_words'] > 0) {
-                $wordInfo = " {$wordReport['new_words']} Übungswörter wurden automatisch generiert.";
-            } elseif (!empty($wordReport['errors'])) {
-                $wordInfo = ' Wortgenerierung war nicht möglich (kein API-Key oder kein Lehrplan verfügbar).';
-            }
-        }
-
         if ($startTest) {
             $_SESSION['flash'] = [
                 'type'    => 'info',
-                'message' => "✅ $name wurde angelegt!{$wordInfo} Einstufungstest-Funktion folgt in einem späteren Schritt.",
+                'message' => "✅ $name wurde angelegt! Einstufungstest kann jetzt gestartet werden.",
             ];
         } else {
             $_SESSION['flash'] = [
                 'type'    => 'success',
-                'message' => "✅ Einrichtung abgeschlossen! $name kann sich jetzt anmelden.{$wordInfo}",
+                'message' => "✅ Einrichtung abgeschlossen! $name kann sich jetzt anmelden.",
             ];
         }
 

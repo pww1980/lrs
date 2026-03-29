@@ -1,6 +1,27 @@
 <?php
-// Superadmin System-Übersicht (Platzhalter)
+// Superadmin System-Übersicht
 $pageTitle = 'Systemübersicht — ' . APP_NAME;
+
+// Admins laden
+$admins = db()->query(
+    "SELECT id, username, display_name, active, last_login,
+            (SELECT COUNT(*) FROM child_admins WHERE admin_id = users.id) AS child_count
+     FROM users WHERE role = 'admin' ORDER BY display_name"
+)->fetchAll();
+
+// Kinder laden
+$children = db()->query(
+    "SELECT u.id, u.username, u.display_name, u.grade_level, u.active, u.last_login,
+            (SELECT display_name FROM users a
+               JOIN child_admins ca ON a.id = ca.admin_id
+              WHERE ca.child_id = u.id AND ca.role = 'primary' LIMIT 1) AS primary_admin
+     FROM users u WHERE u.role = 'child' ORDER BY u.display_name"
+)->fetchAll();
+
+$errors  = $_SESSION['system_errors']  ?? [];
+$success = $_SESSION['system_success'] ?? null;
+unset($_SESSION['system_errors'], $_SESSION['system_success']);
+$csrfToken = \App\Helpers\Auth::csrfToken();
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -16,10 +37,121 @@ $pageTitle = 'Systemübersicht — ' . APP_NAME;
   <span class="navbar-user">⭐ <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?> (Superadmin)</span>
   <a href="<?= url('/logout') ?>" class="btn btn-sm">Abmelden</a>
 </nav>
-<main class="container">
-  <h2>Systemübersicht</h2>
-  <p>Willkommen im Superadmin-Bereich.</p>
-  <p><em>Systemverwaltung wird in einem späteren Schritt implementiert.</em></p>
+<main class="container" style="max-width:900px">
+
+  <h2 style="margin-bottom:.5rem">Systemübersicht</h2>
+  <p style="margin-bottom:1.5rem">
+    <a href="<?= url('/setup/wizard') ?>" class="btn btn-primary">➕ Kind hinzufügen (Wizard)</a>
+  </p>
+
+  <?php if ($success): ?>
+    <div class="alert alert-success" style="margin-bottom:1rem"><?= htmlspecialchars($success) ?></div>
+  <?php endif; ?>
+
+  <!-- ══ ADMIN ANLEGEN ══════════════════════════════════════════════════ -->
+  <section class="dash-section">
+    <div class="dash-section-title">➕ Admin-Account anlegen</div>
+    <p style="color:var(--color-muted);margin-bottom:1rem;font-size:.9rem">
+      Admins können sich einloggen, Kinder anlegen und den Lernfortschritt überwachen.
+    </p>
+
+    <?php if (!empty($errors)): ?>
+      <div class="alert alert-error" style="margin-bottom:1rem">
+        <strong>Fehler:</strong>
+        <ul style="margin:.25rem 0 0 1rem">
+          <?php foreach ($errors as $e): ?>
+            <li><?= htmlspecialchars($e) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
+
+    <form method="POST" action="<?= url('/admin/system/create-admin') ?>" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:600px">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+
+      <div class="form-group" style="margin:0">
+        <label>Benutzername</label>
+        <input type="text" name="username" required
+               value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
+               placeholder="z.B. patrick">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Anzeigename</label>
+        <input type="text" name="display_name" required
+               value="<?= htmlspecialchars($_POST['display_name'] ?? '') ?>"
+               placeholder="z.B. Patrick">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Passwort <small>(min. 6 Zeichen)</small></label>
+        <input type="password" name="password" required autocomplete="new-password">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Passwort bestätigen</label>
+        <input type="password" name="password_confirm" required autocomplete="new-password">
+      </div>
+      <div style="grid-column:1/-1">
+        <button type="submit" class="btn btn-primary">Admin anlegen</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ══ ADMINS ÜBERSICHT ═══════════════════════════════════════════════ -->
+  <?php if (!empty($admins)): ?>
+  <section class="dash-section">
+    <div class="dash-section-title">👤 Admins (<?= count($admins) ?>)</div>
+    <table class="children-table">
+      <thead><tr>
+        <th>Anzeigename</th><th>Benutzername</th><th>Kinder</th><th>Letzter Login</th><th>Status</th><th>Aktionen</th>
+      </tr></thead>
+      <tbody>
+        <?php foreach ($admins as $admin): ?>
+        <tr>
+          <td><strong><?= htmlspecialchars($admin['display_name']) ?></strong></td>
+          <td><?= htmlspecialchars($admin['username']) ?></td>
+          <td><?= (int)$admin['child_count'] ?></td>
+          <td><?= $admin['last_login'] ? date('d.m.Y', strtotime($admin['last_login'])) : '—' ?></td>
+          <td><?= $admin['active'] ? '<span class="badge badge-active">Aktiv</span>' : '<span class="badge badge-pending">Gesperrt</span>' ?></td>
+          <td>
+            <form method="POST" action="<?= url('/admin/system/toggle-admin') ?>" style="display:inline">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+              <input type="hidden" name="admin_id"   value="<?= (int)$admin['id'] ?>">
+              <button type="submit" class="btn btn-sm"
+                      onclick="return confirm('Wirklich?')">
+                <?= $admin['active'] ? 'Sperren' : 'Aktivieren' ?>
+              </button>
+            </form>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </section>
+  <?php endif; ?>
+
+  <!-- ══ KINDER ÜBERSICHT ══════════════════════════════════════════════ -->
+  <?php if (!empty($children)): ?>
+  <section class="dash-section">
+    <div class="dash-section-title">🧒 Alle Kinder (<?= count($children) ?>)</div>
+    <table class="children-table">
+      <thead><tr>
+        <th>Name</th><th>Benutzername</th><th>Klasse</th><th>Admin</th><th>Letzter Login</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        <?php foreach ($children as $child): ?>
+        <tr>
+          <td><strong><?= htmlspecialchars($child['display_name']) ?></strong></td>
+          <td><?= htmlspecialchars($child['username']) ?></td>
+          <td><?= htmlspecialchars($child['grade_level'] ?? '—') ?></td>
+          <td><?= htmlspecialchars($child['primary_admin'] ?? '—') ?></td>
+          <td><?= $child['last_login'] ? date('d.m.Y', strtotime($child['last_login'])) : '—' ?></td>
+          <td><?= $child['active'] ? '<span class="badge badge-active">Aktiv</span>' : '<span class="badge badge-pending">Gesperrt</span>' ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </section>
+  <?php endif; ?>
+
 </main>
 </body>
 </html>

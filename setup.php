@@ -18,6 +18,20 @@ function superadminExists(): bool
     try {
         $count = db()->query("SELECT COUNT(*) FROM users WHERE role = 'superadmin'")->fetchColumn();
         return (int)$count > 0;
+    } catch (\RuntimeException $e) {
+        if (str_starts_with($e->getMessage(), 'PERMISSIONS_ERROR:')) {
+            $dir = substr($e->getMessage(), strlen('PERMISSIONS_ERROR:'));
+            http_response_code(500);
+            die(renderError(
+                'Schreibrechte fehlen',
+                'Der Webserver kann die Datenbank nicht anlegen.<br>'
+                . 'Bitte einmalig per SSH ausführen:<br><br>'
+                . '<code style="background:#263238;color:#aed581;padding:.5rem 1rem;border-radius:6px;display:block;margin-top:.5rem">'
+                . 'chown -R www-data:www-data ' . htmlspecialchars($dir) . '</code>'
+                . '<br>Danach diese Seite neu laden.'
+            ));
+        }
+        return false;
     } catch (\Exception) {
         return false;
     }

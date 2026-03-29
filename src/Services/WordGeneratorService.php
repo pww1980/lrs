@@ -63,6 +63,75 @@ class WordGeneratorService
      *   curriculum_file:  string|null
      * }
      */
+    /**
+     * Gibt alle Kategorie-Codes des passenden Lehrplans zurück (für Batch-UI).
+     * @return string[]  z.B. ['A1','A2','A3','B1',…]
+     */
+    public function getCategoryList(): array
+    {
+        if (!$this->loadCurriculum()) {
+            return [];
+        }
+        return array_keys($this->curriculum['categories'] ?? []);
+    }
+
+    /**
+     * Stellt sicher, dass für EINE Kategorie genug Wörter vorhanden sind.
+     * Wird vom Batch-Endpoint (/setup/generate-words/batch) pro AJAX-Request aufgerufen.
+     *
+     * @return array{new_words: int, skipped: bool, error: string|null}
+     */
+    public function ensureCategory(string $code): array
+    {
+        if (!$this->loadCurriculum()) {
+            return ['new_words' => 0, 'skipped' => false, 'error' => 'Kein Lehrplan-JSON gefunden'];
+        }
+
+        $categories = $this->curriculum['categories'] ?? [];
+        if (!isset($categories[$code])) {
+            return ['new_words' => 0, 'skipped' => false, 'error' => "Kategorie {$code} nicht im Lehrplan"];
+        }
+
+        $existing = $this->countExistingWords($code);
+        if ($existing >= self::MIN_WORDS) {
+            return ['new_words' => 0, 'skipped' => true, 'error' => null];
+        }
+
+        $catData  = $categories[$code];
+        $needed   = max(1, self::GENERATE_COUNT - $existing);
+        $curriculumRef = sprintf('%s, %s', $this->curriculum['source'] ?? 'Lehrplan', $this->curriculum['grades'] ?? (string)$this->gradeLevel);
+
+        try {
+            $ai = new AIService($this->adminUserId);
+        } catch (\Throwable $e) {
+            return ['new_words' => 0, 'skipped' => false, 'error' => 'AIService: ' . $e->getMessage()];
+        }
+
+        try {
+            $words = $ai->generateWords(
+                categoryCode:     $code,
+                categoryLabel:    $catData['label']            ?? $code,
+                gradeLevel:       $this->gradeLevel,
+                federalState:     $this->federalState,
+                schoolType:       $this->schoolType,
+                curriculumText:   $catData['curriculum_text']  ?? '',
+                officialExamples: $catData['examples_official'] ?? [],
+                curriculumRef:    $curriculumRef,
+                language:         $this->language,
+                count:            $needed,
+            );
+        } catch (\Throwable $e) {
+            return ['new_words' => 0, 'skipped' => false, 'error' => "KI-Fehler: " . $e->getMessage()];
+        }
+
+        if (empty($words)) {
+            return ['new_words' => 0, 'skipped' => false, 'error' => 'KI lieferte keine Wörter zurück'];
+        }
+
+        $saved = $this->saveWords($code, $words, $curriculumRef);
+        return ['new_words' => $saved, 'skipped' => false, 'error' => null];
+    }
+
     public function ensureWords(): array
     {
         $report = [

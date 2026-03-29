@@ -96,20 +96,25 @@ match (true) {
             (new \App\Controllers\WizardController())->handle();
         })(),
 
-    // Admin Dashboard (leitet zum Wizard wenn noch kein Kind existiert)
+    // Admin Dashboard
     str_starts_with($uri, '/admin/dashboard')
-        => (function () {
-            \App\Helpers\Auth::requireRole('admin', 'superadmin');
-            // Wenn kein Kind existiert → Wizard starten
-            $childCount = (int) db()->query(
-                "SELECT COUNT(*) FROM users WHERE role = 'child'"
-            )->fetchColumn();
-            if ($childCount === 0) {
-                header('Location: /setup/wizard');
-                exit;
-            }
-            require __DIR__ . '/src/Views/admin/dashboard.php';
-        })(),
+        => \App\Controllers\DashboardController::show(),
+
+    // Plan bestätigen (AJAX POST)
+    $uri === '/admin/plan/approve' && $method === 'POST'
+        => \App\Controllers\DashboardController::approvePlan(),
+
+    // Quest ein-/ausschalten (AJAX POST)
+    $uri === '/admin/plan/quest-toggle' && $method === 'POST'
+        => \App\Controllers\DashboardController::toggleQuest(),
+
+    // KI-Auswertung (Admin-seitig, AJAX POST)
+    $uri === '/admin/analysis/run' && $method === 'POST'
+        => \App\Controllers\AnalysisController::runForAdmin(),
+
+    // KI-Auswertung (Kind-seitig, AJAX POST)
+    $uri === '/learn/test/analyze' && $method === 'POST'
+        => \App\Controllers\AnalysisController::runForChild(),
 
     // Superadmin System
     str_starts_with($uri, '/admin/system')

@@ -1,0 +1,349 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Helpers\Auth;
+
+/**
+ * DashboardController — Papa-Dashboard
+ *
+ * Routen:
+ *   GET  /admin/dashboard          → show()
+ *   POST /admin/plan/approve       → approvePlan()
+ *   POST /admin/plan/quest-toggle  → toggleQuest()
+ */
+class DashboardController
+{
+    // ── Öffentliche Handler ───────────────────────────────────────────────
+
+    /**
+     * GET /admin/dashboard
+     * Zeigt Kinder-Übersicht, ausstehende Auswertungen, Draft-Pläne.
+     */
+    public static function show(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        $adminId = (int)$_SESSION['user_id'];
+
+        // Wenn noch kein Kind → Wizard
+        $childCount = (int)db()->query("SELECT COUNT(*) FROM users WHERE role='child'")->fetchColumn();
+        if ($childCount === 0) {
+            header('Location: /setup/wizard');
+            exit;
+        }
+
+        $children   = self::loadChildrenData($adminId);
+        $flash      = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require __DIR__ . '/../Views/admin/dashboard.php';
+    }
+
+    /**
+     * POST /admin/plan/approve  (AJAX, JSON-Body)
+     * Aktiviert einen Draft-Plan: status → 'active', erste Sektion freischalten.
+     */
+    public static function approvePlan(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        header('Content-Type: application/json');
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF-Fehler']);
+            exit;
+        }
+
+        $adminId = (int)$_SESSION['user_id'];
+        $planId  = (int)($data['plan_id'] ?? 0);
+
+        // Plan validieren — muss Kind dieses Admins gehören
+        $stmt = db()->prepare("
+            SELECT lp.id, lp.user_id
+            FROM learning_plans lp
+            JOIN child_admins ca ON lp.user_id = ca.child_id
+            WHERE lp.id = ? AND ca.admin_id = ? AND lp.status = 'draft'
+        ");
+        $stmt->execute([$planId, $adminId]);
+        $plan = $stmt->fetch();
+
+        if (!$plan) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Plan nicht gefunden oder bereits aktiv']);
+            exit;
+        }
+
+        $db = db();
+        $db->beginTransaction();
+        try {
+            // Plan aktivieren
+            $db->prepare(
+                "UPDATE learning_plans SET status='active', activated_at=CURRENT_TIMESTAMP WHERE id=?"
+            )->execute([$planId]);
+
+            // Alle anderen aktiven Pläne dieses Kindes auf 'superseded' setzen
+            $db->prepare(
+                "UPDATE learning_plans SET status='superseded'
+                 WHERE user_id=? AND status='active' AND id != ?"
+            )->execute([$plan['user_id'], $planId]);
+
+            // Erstes nicht-skipped Biom freischalten
+            $firstBiome = $db->prepare(
+                "SELECT id FROM plan_biomes WHERE plan_id=? AND status='locked'
+                 ORDER BY order_index ASC LIMIT 1"
+            );
+            $firstBiome->execute([$planId]);
+            $biome = $firstBiome->fetch();
+
+            if ($biome) {
+                $db->prepare(
+                    "UPDATE plan_biomes SET status='active', unlocked_at=CURRENT_TIMESTAMP WHERE id=?"
+                )->execute([$biome['id']]);
+
+                // Erste nicht-skipped Quest des Bioms freischalten
+                $firstQuest = $db->prepare(
+                    "SELECT id FROM quests WHERE biome_id=? AND status='locked'
+                     ORDER BY order_index ASC LIMIT 1"
+                );
+                $firstQuest->execute([$biome['id']]);
+                $quest = $firstQuest->fetch();
+
+                if ($quest) {
+                    $db->prepare(
+                        "UPDATE quests SET status='active', unlocked_at=CURRENT_TIMESTAMP WHERE id=?"
+                    )->execute([$quest['id']]);
+
+                    // Erste plan_unit der Quest aktivieren
+                    $firstUnit = $db->prepare(
+                        "SELECT id FROM plan_units WHERE quest_id=? AND status='pending'
+                         ORDER BY order_index ASC LIMIT 1"
+                    );
+                    $firstUnit->execute([$quest['id']]);
+                    $unit = $firstUnit->fetch();
+
+                    if ($unit) {
+                        $db->prepare(
+                            "UPDATE plan_units SET status='active' WHERE id=?"
+                        )->execute([$unit['id']]);
+                    }
+                }
+            }
+
+            $db->commit();
+            echo json_encode(['success' => true, 'message' => 'Plan aktiviert!']);
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('DashboardController::approvePlan — ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * POST /admin/plan/quest-toggle  (AJAX, JSON-Body)
+     * Schaltet eine Quest ein (locked) oder aus (skipped) und erstellt/löscht plan_units.
+     */
+    public static function toggleQuest(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        header('Content-Type: application/json');
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF-Fehler']);
+            exit;
+        }
+
+        $adminId = (int)$_SESSION['user_id'];
+        $questId = (int)($data['quest_id'] ?? 0);
+
+        // Quest validieren — muss zu einem Kind dieses Admins gehören
+        $stmt = db()->prepare("
+            SELECT q.id, q.status, q.biome_id,
+                   tr.severity, tr.strategy_level, q.category
+            FROM quests q
+            JOIN plan_biomes pb     ON q.biome_id   = pb.id
+            JOIN learning_plans lp  ON pb.plan_id   = lp.id
+            JOIN child_admins ca    ON lp.user_id   = ca.child_id
+            LEFT JOIN test_results tr ON (tr.test_id = lp.test_id AND tr.category = q.category)
+            WHERE q.id = ? AND ca.admin_id = ? AND lp.status = 'draft'
+        ");
+        $stmt->execute([$questId, $adminId]);
+        $quest = $stmt->fetch();
+
+        if (!$quest) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Quest nicht gefunden']);
+            exit;
+        }
+
+        // Aktive/abgeschlossene Quests dürfen nicht umgeschaltet werden
+        if (in_array($quest['status'], ['active', 'completed'])) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Aktive oder abgeschlossene Quests können nicht geändert werden']);
+            exit;
+        }
+
+        $db = db();
+        if ($quest['status'] === 'skipped') {
+            // Einschalten: locked + plan_units erstellen
+            $db->prepare("UPDATE quests SET status='locked' WHERE id=?")->execute([$questId]);
+
+            $severity = $quest['severity']       ?? 'mild';
+            $strategy = (int)($quest['strategy_level'] ?? 1);
+            $units = self::buildUnits($severity, $strategy);
+
+            $stmt2 = $db->prepare(
+                "INSERT INTO plan_units (quest_id, order_index, format, word_count, difficulty, status)
+                 VALUES (?, ?, ?, 20, ?, 'pending')"
+            );
+            foreach ($units as $i => [$format, $diff]) {
+                $stmt2->execute([$questId, $i, $format, $diff]);
+            }
+            $newStatus = 'locked';
+        } else {
+            // Ausschalten: skipped + plan_units löschen
+            $db->prepare("UPDATE quests SET status='skipped' WHERE id=?")->execute([$questId]);
+            $db->prepare("DELETE FROM plan_units WHERE quest_id=? AND status='pending'")
+               ->execute([$questId]);
+            $newStatus = 'skipped';
+        }
+
+        echo json_encode(['success' => true, 'new_status' => $newStatus]);
+        exit;
+    }
+
+    // ── Private Hilfsmethoden ─────────────────────────────────────────────
+
+    /**
+     * Lädt alle Kinder dieses Admins mit vollständigen Statusinformationen.
+     */
+    private static function loadChildrenData(int $adminId): array
+    {
+        // Kinder laden
+        $stmt = db()->prepare("
+            SELECT u.id, u.display_name, u.grade_level, u.school_type, u.theme,
+                   u.last_login, u.active, ca.role AS admin_role
+            FROM users u
+            JOIN child_admins ca ON u.id = ca.child_id
+            WHERE ca.admin_id = ? AND u.role = 'child'
+            ORDER BY u.display_name ASC
+        ");
+        $stmt->execute([$adminId]);
+        $children = $stmt->fetchAll();
+
+        foreach ($children as &$child) {
+            $cid = (int)$child['id'];
+
+            // Letzter abgeschlossener Test
+            $testStmt = db()->prepare(
+                "SELECT id, type, status, completed_at FROM tests
+                 WHERE user_id=? ORDER BY started_at DESC LIMIT 1"
+            );
+            $testStmt->execute([$cid]);
+            $child['latest_test'] = $testStmt->fetch() ?: null;
+
+            // Auswertungs-Status ermitteln
+            $child['analysis_status'] = 'none'; // none | pending | done
+            if ($child['latest_test'] && $child['latest_test']['status'] === 'completed') {
+                $hasResults = (int)db()->prepare(
+                    "SELECT COUNT(*) FROM test_results WHERE test_id=?"
+                )->execute([$child['latest_test']['id']]) && true;
+
+                $resStmt = db()->prepare("SELECT COUNT(*) FROM test_results WHERE test_id=?");
+                $resStmt->execute([$child['latest_test']['id']]);
+                $child['analysis_status'] = ((int)$resStmt->fetchColumn() > 0) ? 'done' : 'pending';
+            }
+
+            // Test-Ergebnisse pro Kategorie (für Error-Profil)
+            $child['test_results'] = [];
+            if ($child['latest_test']) {
+                $resStmt2 = db()->prepare(
+                    "SELECT block, category, error_rate, severity, strategy_level, total_items, correct_items
+                     FROM test_results WHERE test_id=? ORDER BY block, category"
+                );
+                $resStmt2->execute([$child['latest_test']['id']]);
+                $child['test_results'] = $resStmt2->fetchAll();
+            }
+
+            // Draft-Plan (neuester)
+            $planStmt = db()->prepare(
+                "SELECT id, status, created_at, ai_notes
+                 FROM learning_plans
+                 WHERE user_id=? AND status='draft'
+                 ORDER BY created_at DESC LIMIT 1"
+            );
+            $planStmt->execute([$cid]);
+            $child['draft_plan'] = $planStmt->fetch() ?: null;
+
+            // Biome + Quests des Draft-Plans
+            $child['plan_biomes'] = [];
+            if ($child['draft_plan']) {
+                $biomeStmt = db()->prepare(
+                    "SELECT id, block, name, theme_biome, order_index, status
+                     FROM plan_biomes WHERE plan_id=? ORDER BY order_index"
+                );
+                $biomeStmt->execute([$child['draft_plan']['id']]);
+                $biomes = $biomeStmt->fetchAll();
+
+                foreach ($biomes as &$biome) {
+                    $qStmt = db()->prepare(
+                        "SELECT q.id, q.category, q.title, q.description,
+                                q.order_index, q.status, q.difficulty, q.required_score,
+                                q.ai_notes,
+                                COUNT(pu.id) AS unit_count
+                         FROM quests q
+                         LEFT JOIN plan_units pu ON pu.quest_id = q.id
+                         WHERE q.biome_id = ?
+                         GROUP BY q.id
+                         ORDER BY q.order_index"
+                    );
+                    $qStmt->execute([$biome['id']]);
+                    $biome['quests'] = $qStmt->fetchAll();
+                }
+                unset($biome);
+                $child['plan_biomes'] = $biomes;
+            }
+
+            // Aktiver Plan (für Fortschrittsanzeige)
+            $activePlanStmt = db()->prepare(
+                "SELECT id, status, activated_at FROM learning_plans
+                 WHERE user_id=? AND status='active' ORDER BY activated_at DESC LIMIT 1"
+            );
+            $activePlanStmt->execute([$cid]);
+            $child['active_plan'] = $activePlanStmt->fetch() ?: null;
+        }
+        unset($child);
+
+        return $children;
+    }
+
+    /**
+     * Berechnet plan_units für eine Kombination aus severity + strategy_level.
+     * Identisch zur Logik in AnalysisController.
+     */
+    private static function buildUnits(string $severity, int $strategyLevel): array
+    {
+        $base = match($severity) {
+            'severe'   => [['word',1],['word',2],['gap',1],['gap',2]],
+            'moderate' => [['word',1],['gap',1],['gap',2]],
+            'mild'     => [['word',1],['gap',1]],
+            default    => [['word',1]],
+        };
+
+        if ($strategyLevel >= 3) {
+            return array_map(fn($u) => match($u[0]) {
+                'word'  => ['gap',      $u[1]],
+                'gap'   => ['sentence', $u[1]],
+                default => $u,
+            }, $base);
+        }
+
+        return $base;
+    }
+}

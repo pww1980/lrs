@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Helpers\Auth;
 use App\Services\TTSService;
 use App\Services\AIService;
+use App\Services\AchievementService;
 
 /**
  * SessionController — Übungseinheiten
@@ -16,6 +17,7 @@ use App\Services\AIService;
  *   GET  /learn/session/tts           → getTts()
  *   POST /learn/session/answer        → submitAnswer()
  *   POST /learn/session/complete      → completeSession()
+ *   POST /learn/session/feedback      → getFeedback()
  */
 class SessionController
 {
@@ -645,6 +647,133 @@ class SessionController
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);
         }
+        exit;
+    }
+
+    /**
+     * POST /learn/session/feedback  (AJAX, JSON-Body)
+     * KI-Feedback nach abgeschlossener Session + Achievement-Check.
+     * Wird asynchron nach completeSession() aufgerufen.
+     */
+    public static function getFeedback(): void
+    {
+        Auth::requireRole('child');
+        header('Content-Type: application/json');
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF-Fehler']);
+            exit;
+        }
+
+        $userId    = (int)$_SESSION['user_id'];
+        $sessionId = (int)($data['session_id'] ?? 0);
+
+        // Session validieren — muss completed sein
+        $sesStmt = db()->prepare(
+            "SELECT s.*, pu.format, pu.word_count, q.category, q.title AS quest_title
+             FROM sessions s
+             JOIN plan_units pu ON s.plan_unit_id = pu.id
+             JOIN quests q      ON pu.quest_id    = q.id
+             WHERE s.id = ? AND s.user_id = ? AND s.status = 'completed'"
+        );
+        $sesStmt->execute([$sessionId, $userId]);
+        $session = $sesStmt->fetch();
+
+        if (!$session) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Session nicht gefunden']);
+            exit;
+        }
+
+        // Achievements prüfen (immer, auch wenn KI nicht verfügbar)
+        $achievements = [];
+        try {
+            $achievements = AchievementService::checkAfterSession($userId, $sessionId);
+        } catch (\Throwable $e) {
+            error_log('AchievementService::checkAfterSession — ' . $e->getMessage());
+        }
+
+        // KI-Feedback (optional — falls kein API-Key, graceful skip)
+        $aiFeedback = null;
+        try {
+            // Falsch geschriebene Wörter laden
+            $wrongStmt = db()->prepare("
+                SELECT DISTINCT w.word, sa.user_input, w.primary_category
+                FROM session_attempts sa
+                JOIN session_items si ON sa.item_id  = si.id
+                JOIN words w          ON si.word_id  = w.id
+                WHERE si.session_id = ? AND sa.is_correct = 0
+                LIMIT 10
+            ");
+            $wrongStmt->execute([$sessionId]);
+            $wrongItems = $wrongStmt->fetchAll();
+
+            $sessionStats = [
+                'total_items'        => (int)$session['total_items'],
+                'correct_first_try'  => (int)$session['correct_first_try'],
+                'correct_second_try' => (int)$session['correct_second_try'],
+                'wrong_total'        => (int)$session['wrong_total'],
+                'duration_seconds'   => (int)$session['duration_seconds'],
+                'format'             => $session['format'],
+                'quest_title'        => $session['quest_title'],
+                'category'           => $session['category'],
+            ];
+
+            $userProfile = [
+                'display_name' => $_SESSION['display_name'] ?? '',
+                'grade_level'  => $_SESSION['grade_level']  ?? 4,
+                'theme'        => $_SESSION['theme']         ?? 'minecraft',
+            ];
+
+            set_time_limit(60);
+            $ai = new AIService($userId);
+            $aiFeedback = $ai->generateSessionFeedback($sessionStats, $wrongItems, $userProfile, $sessionId);
+
+            // In Session speichern
+            db()->prepare(
+                "UPDATE sessions SET ai_summary=?, ai_next_action=? WHERE id=?"
+            )->execute([
+                $aiFeedback['summary'],
+                $aiFeedback['encouragement'],
+                $sessionId,
+            ]);
+
+            // Plan-Amendment wenn nötig
+            if ($aiFeedback['amendment_needed'] && $aiFeedback['amendment_reason']) {
+                $planIdStmt = db()->prepare("
+                    SELECT pb.plan_id FROM sessions s
+                    JOIN plan_units pu ON s.plan_unit_id = pu.id
+                    JOIN quests q      ON pu.quest_id    = q.id
+                    JOIN plan_biomes pb ON q.biome_id    = pb.id
+                    WHERE s.id = ?
+                ");
+                $planIdStmt->execute([$sessionId]);
+                $planRow = $planIdStmt->fetch();
+
+                if ($planRow) {
+                    db()->prepare(
+                        "INSERT INTO plan_amendments
+                         (plan_id, trigger_type, trigger_ref_id, changes_json, ai_reasoning, admin_approved)
+                         VALUES (?, 'session_result', ?, '{}', ?, 0)"
+                    )->execute([
+                        $planRow['plan_id'],
+                        $sessionId,
+                        $aiFeedback['amendment_reason'],
+                    ]);
+                }
+            }
+
+        } catch (\Throwable $e) {
+            error_log('SessionController::getFeedback KI-Fehler — ' . $e->getMessage());
+        }
+
+        echo json_encode([
+            'feedback'     => $aiFeedback,
+            'achievements' => $achievements,
+        ]);
         exit;
     }
 

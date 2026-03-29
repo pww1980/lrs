@@ -172,7 +172,7 @@ $wordCount = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetc
     <div class="dash-section-title">🧒 Alle Kinder (<?= count($children) ?>)</div>
     <table class="children-table">
       <thead><tr>
-        <th>Name</th><th>Benutzername</th><th>Klasse</th><th>Admin</th><th>Letzter Login</th><th>Status</th>
+        <th>Name</th><th>Benutzername</th><th>Klasse</th><th>Admin</th><th>Letzter Login</th><th>Status</th><th></th>
       </tr></thead>
       <tbody>
         <?php foreach ($children as $child): ?>
@@ -183,6 +183,7 @@ $wordCount = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetc
           <td><?= htmlspecialchars($child['primary_admin'] ?? '—') ?></td>
           <td><?= $child['last_login'] ? date('d.m.Y', strtotime($child['last_login'])) : '—' ?></td>
           <td><?= $child['active'] ? '<span class="badge badge-active">Aktiv</span>' : '<span class="badge badge-pending">Gesperrt</span>' ?></td>
+          <td><a href="<?= url('/admin/child/' . (int)$child['id'] . '/edit') ?>" class="btn btn-sm btn-secondary">✏️</a></td>
         </tr>
         <?php endforeach; ?>
       </tbody>

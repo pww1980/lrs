@@ -406,6 +406,12 @@ class DashboardController
             redirect('/admin/dashboard');
         }
 
+        // Aktuelle Kind-Settings laden (für tts_speed etc.)
+        $childSettings = [];
+        try {
+            $childSettings = \App\Services\EncryptionService::make()->loadUserSettings($childId);
+        } catch (\Throwable) {}
+
         $error = $_SESSION['child_edit_error'] ?? null;
         unset($_SESSION['child_edit_error']);
 
@@ -434,6 +440,7 @@ class DashboardController
         $schoolType  = trim($_POST['school_type']   ?? 'Grundschule');
         $theme       = trim($_POST['theme']         ?? 'minecraft');
         $active      = isset($_POST['active']) ? 1 : 0;
+        $ttsSpeed    = in_array($_POST['tts_speed'] ?? '', ['normal','slow']) ? $_POST['tts_speed'] : 'normal';
 
         if ($displayName === '') {
             $_SESSION['child_edit_error'] = 'Name darf nicht leer sein.';
@@ -449,6 +456,12 @@ class DashboardController
             "UPDATE users SET display_name=?, grade_level=?, school_type=?, theme=?, active=?
              WHERE id=? AND role='child'"
         )->execute([$displayName, $gradeLevel, $schoolType, $theme, $active, $childId]);
+
+        // tts_speed als verschlüsseltes Kind-Setting speichern
+        try {
+            $enc = \App\Services\EncryptionService::make();
+            $enc->saveSetting($childId, 'tts_speed', $ttsSpeed);
+        } catch (\Throwable) {}
 
         $_SESSION['flash'] = ['type' => 'success', 'text' => 'Profil von ' . htmlspecialchars($displayName) . ' gespeichert.'];
         redirect('/admin/dashboard');

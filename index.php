@@ -301,16 +301,20 @@ match (true) {
 
             $adminId = (int)$_SESSION['user_id'];
             $offset  = max(0, (int)($_GET['offset'] ?? 0));
+            $type    = ($_GET['type'] ?? 'words') === 'sentences' ? 'sentences' : 'words';
             $limit   = 5;
             $speeds  = ['normal', 'slow'];
 
-            // Alle aktiven Wörter zählen
-            $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
-
-            // Batch laden
-            $stmt = db()->prepare("SELECT id, word FROM words WHERE active=1 ORDER BY id LIMIT ? OFFSET ?");
+            // Texte je nach Typ laden
+            if ($type === 'sentences') {
+                $total = (int)db()->query("SELECT COUNT(*) FROM sentences WHERE active=1")->fetchColumn();
+                $stmt  = db()->prepare("SELECT id, sentence FROM sentences WHERE active=1 ORDER BY id LIMIT ? OFFSET ?");
+            } else {
+                $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
+                $stmt  = db()->prepare("SELECT id, word AS sentence FROM words WHERE active=1 ORDER BY id LIMIT ? OFFSET ?");
+            }
             $stmt->execute([$limit, $offset]);
-            $words = $stmt->fetchAll();
+            $items = $stmt->fetchAll();
 
             $done    = 0;
             $errors  = 0;
@@ -320,16 +324,18 @@ match (true) {
                 $tts = new \App\Services\TTSService($adminId);
                 if ($tts->isBrowserTTS()) {
                     echo json_encode(['done' => $total, 'total' => $total, 'skipped' => $total,
-                                      'errors' => 0, 'provider' => 'browser']);
+                                      'errors' => 0, 'provider' => 'browser', 'type' => $type]);
                     exit;
                 }
 
-                foreach ($words as $word) {
+                foreach ($items as $item) {
+                    // Lückentext-Platzhalter für TTS normalisieren
+                    $text = str_replace(['____', '___', '__'], ' ... ', $item['sentence']);
                     foreach ($speeds as $speed) {
                         try {
-                            $result = $tts->synthesizeCached($word['word'], $speed);
+                            $result = $tts->synthesizeCached($text, $speed);
                             if ($result) {
-                                $done += ($result['cached'] ?? false) ? 0 : 1;
+                                $done    += ($result['cached'] ?? false) ? 0 : 1;
                                 $skipped += ($result['cached'] ?? false) ? 1 : 0;
                             }
                         } catch (\Throwable) {
@@ -343,11 +349,12 @@ match (true) {
             }
 
             echo json_encode([
-                'offset'  => $offset + $limit,
-                'total'   => $total,
-                'done'    => $done,
-                'skipped' => $skipped,
-                'errors'  => $errors,
+                'offset'   => $offset + $limit,
+                'total'    => $total,
+                'done'     => $done,
+                'skipped'  => $skipped,
+                'errors'   => $errors,
+                'type'     => $type,
                 'finished' => ($offset + $limit) >= $total,
             ]);
             exit;

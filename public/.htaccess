@@ -1,0 +1,13 @@
+# Lennarts Diktat-Trainer — Apache-Konfiguration
+# Leitet alle Anfragen an index.php weiter (außer existierende Dateien)
+
+Options -Indexes
+
+RewriteEngine On
+
+# Statische Assets direkt ausliefern
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Alles andere → index.php
+RewriteRule ^ /index.php [L]

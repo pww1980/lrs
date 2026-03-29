@@ -550,6 +550,8 @@ $sections = $progress['sections'] ?? [];
   <span class="test-navbar-user">🎮 <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?></span>
   <?php if ($viewState === 'test'): ?>
     <button class="btn-navbar" id="btn-pause-nav" type="button">⏸ Pause</button>
+    <a href="<?= url('/logout') ?>" class="btn-navbar" style="opacity:.6;font-size:.8rem"
+       onclick="return confirm('Test abbrechen und abmelden?')">Abmelden</a>
   <?php else: ?>
     <a href="<?= url('/logout') ?>" class="btn-navbar">Abmelden</a>
   <?php endif; ?>

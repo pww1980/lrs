@@ -47,6 +47,12 @@
   let nextSectionData = null;  // wird nach completeSection gesetzt
 
   // ── Initialisierung ──────────────────────────────────────────────────────
+  // Browser-TTS Stimmen vorab laden (Chrome lädt sie asynchron)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = function() { window.speechSynthesis.getVoices(); };
+  }
+
   updateCounter();
   loadAndPlayTts(currentItemId, 'normal');
 
@@ -138,11 +144,19 @@
     ttsStatus.textContent = '🔊 Hör genau zu…';
 
     window.speechSynthesis.cancel();
-    browserUtter          = new SpeechSynthesisUtterance(text);
-    browserUtter.lang     = lang;
-    browserUtter.rate     = rate;
-    browserUtter.onend    = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
-    browserUtter.onerror  = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
+    browserUtter      = new SpeechSynthesisUtterance(text);
+    browserUtter.lang = lang;
+    browserUtter.rate = rate;
+
+    // Deutsche Stimme explizit wählen (verhindert amerikanischen Akzent)
+    var voices = window.speechSynthesis.getVoices();
+    var deVoice = voices.find(v => v.lang === 'de-DE')
+               || voices.find(v => v.lang.startsWith('de'))
+               || null;
+    if (deVoice) browserUtter.voice = deVoice;
+
+    browserUtter.onend  = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
+    browserUtter.onerror = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
     window.speechSynthesis.speak(browserUtter);
   }
 

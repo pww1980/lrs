@@ -1,0 +1,61 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ha.n-i.pw;
+
+    # Webroot = Projektverzeichnis (wo index.php liegt)
+    root /path/to/lrs;
+    index index.php;
+
+    # Zeichensatz
+    charset utf-8;
+
+    # Logging
+    access_log /var/log/nginx/lrs_access.log;
+    error_log  /var/log/nginx/lrs_error.log;
+
+    # Verzeichnis-Listing deaktivieren
+    autoindex off;
+
+    # ── Statische Dateien direkt ausliefern ──────────────────────────────
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # ── SQLite-Datenbank und sensible Dateien blockieren ─────────────────
+    location ~* \.(sqlite|sqlite3|env|sql|json|md|log)$ {
+        deny all;
+        return 404;
+    }
+
+    # ── src/, config/, database/, themes/ nie direkt ausliefern ─────────
+    location ~ ^/(src|config|database|themes|data)/ {
+        deny all;
+        return 404;
+    }
+
+    # ── Alle anderen Requests an den PHP-Router ──────────────────────────
+    location / {
+        try_files $uri $uri/ /index.php$is_args$args;
+    }
+
+    # ── PHP-FPM ──────────────────────────────────────────────────────────
+    location ~ \.php$ {
+        # Socket-Pfad anpassen (php8.2-fpm oder php8.1-fpm je nach Installation)
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT   $document_root;
+
+        # Sicherheit: kein PATH_INFO-Exploit
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    }
+
+    # ── .htaccess und versteckte Dateien blockieren ──────────────────────
+    location ~ /\. {
+        deny all;
+    }
+}

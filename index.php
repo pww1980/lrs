@@ -46,7 +46,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $isStaticPath = str_starts_with($uri, '/public/')
              || str_starts_with($uri, '/css/')
-             || str_starts_with($uri, '/js/');
+             || str_starts_with($uri, '/js/')
+             || str_starts_with($uri, '/themes/');
 
 if (!$isStaticPath) {
     try {
@@ -72,7 +73,7 @@ function showPermissionsError(string $dir): never
     echo <<<HTML
     <!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
     <title>Einrichtung erforderlich</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/public/css/app.css">
     <style>
       body { background:#f5f5f5; display:flex; align-items:center; justify-content:center; min-height:100vh; }
       .box { background:#fff; border-radius:12px; padding:2rem; max-width:560px; box-shadow:0 4px 16px rgba(0,0,0,.1); }
@@ -194,6 +195,27 @@ match (true) {
     // Admin Dashboard
     str_starts_with($uri, '/admin/dashboard')
         => \App\Controllers\DashboardController::show(),
+
+    // Kind bearbeiten
+    preg_match('#^/admin/child/(\d+)/edit$#', $uri, $m) && $method === 'GET'
+        => \App\Controllers\DashboardController::editChild(),
+
+    preg_match('#^/admin/child/(\d+)/edit$#', $uri, $m) && $method === 'POST'
+        => \App\Controllers\DashboardController::updateChild(),
+
+    // Seed words (Admin, per Browser aufrufbar)
+    $uri === '/admin/seed-words' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            \App\Helpers\Auth::verifyCsrf();
+            header('Content-Type: application/json');
+            ob_start();
+            require BASE_DIR . '/database/seed_words.php';
+            ob_end_clean();
+            $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
+            echo json_encode(['success' => true, 'total' => $total]);
+            exit;
+        })(),
 
     // Lehrerin-Bericht (PDF-fähige HTML-Seite)
     preg_match('#^/admin/report/(\d+)$#', $uri, $m)
@@ -353,7 +375,7 @@ match (true) {
         http_response_code(404);
         echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
               <title>Seite nicht gefunden</title>
-              <link rel="stylesheet" href="/css/app.css">
+              <link rel="stylesheet" href="/public/css/app.css">
               </head><body><div class="container">
               <h1>404 — Seite nicht gefunden</h1>
               <p><a href="/">Zurück zur Startseite</a></p>

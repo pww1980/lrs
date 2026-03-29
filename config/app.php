@@ -44,9 +44,12 @@ function db(): PDO
                 throw new RuntimeException('schema.sql nicht gefunden: ' . $schemaFile);
             }
 
-            // /data-Verzeichnis anlegen falls nötig
+            // /data-Verzeichnis und Unterverzeichnisse anlegen falls nötig
             if (!is_dir(DATA_DIR)) {
                 mkdir(DATA_DIR, 0755, true);
+            }
+            if (!is_dir(DATA_DIR . '/tts_cache')) {
+                mkdir(DATA_DIR . '/tts_cache', 0755, true);
             }
 
             // Schreibrechte prüfen bevor wir es versuchen
@@ -78,6 +81,11 @@ function db(): PDO
             $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             $pdo->exec('PRAGMA foreign_keys = ON;');
             $pdo->exec('PRAGMA journal_mode = WAL;');
+        }
+
+        // Unterverzeichnisse sicherstellen (auch bei bestehenden Installationen)
+        if (!is_dir(DATA_DIR . '/tts_cache')) {
+            @mkdir(DATA_DIR . '/tts_cache', 0755, true);
         }
 
         // FETCH_ASSOC auch für die neue Verbindung setzen

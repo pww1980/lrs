@@ -56,7 +56,7 @@ if ($session) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle) ?></title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css">
   <style>
     /* ── Session Layout ── */
     .session-header {
@@ -580,6 +580,6 @@ if ($session) {
 
 </main>
 
-<script src="/js/session.js"></script>
+<script src="/public/js/session.js"></script>
 </body>
 </html>

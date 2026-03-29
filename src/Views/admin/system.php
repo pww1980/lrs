@@ -22,6 +22,7 @@ $errors  = $_SESSION['system_errors']  ?? [];
 $success = $_SESSION['system_success'] ?? null;
 unset($_SESSION['system_errors'], $_SESSION['system_success']);
 $csrfToken = \App\Helpers\Auth::csrfToken();
+$wordCount = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -29,7 +30,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle) ?></title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css">
 </head>
 <body>
 <nav class="navbar">
@@ -47,6 +48,43 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
   <?php if ($success): ?>
     <div class="alert alert-success" style="margin-bottom:1rem"><?= htmlspecialchars($success) ?></div>
   <?php endif; ?>
+
+  <!-- ══ WORTMATERIAL ══════════════════════════════════════════════════ -->
+  <section class="dash-section" style="margin-bottom:1.5rem">
+    <div class="dash-section-title">📚 Wortmaterial</div>
+    <p style="color:var(--color-muted);margin-bottom:.75rem;font-size:.9rem">
+      Aktive Wörter in der Datenbank: <strong id="word-count"><?= $wordCount ?></strong>
+      <?php if ($wordCount === 0): ?>
+        <span style="color:#e57373"> — Keine Wörter vorhanden! Test kann nicht gestartet werden.</span>
+      <?php endif; ?>
+    </p>
+    <button type="button" class="btn btn-primary" id="btn-seed-words" onclick="seedWords()">
+      📥 Beispielwörter laden (225 Wörter für alle Kategorien A1–D4)
+    </button>
+    <span id="seed-status" style="margin-left:.75rem;font-size:.85rem;color:var(--color-muted)"></span>
+    <script>
+    function seedWords() {
+      var btn = document.getElementById('btn-seed-words');
+      var status = document.getElementById('seed-status');
+      btn.disabled = true;
+      status.textContent = 'Wird geladen…';
+      fetch('<?= url('/admin/seed-words') ?>', {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: 'csrf_token=<?= htmlspecialchars($csrfToken) ?>'
+      }).then(r => r.json()).then(d => {
+        document.getElementById('word-count').textContent = d.total;
+        status.style.color = '#2e7d32';
+        status.textContent = '✅ Fertig — ' + d.total + ' Wörter aktiv';
+        btn.disabled = false;
+      }).catch(() => {
+        status.style.color = '#e57373';
+        status.textContent = '❌ Fehler beim Laden';
+        btn.disabled = false;
+      });
+    }
+    </script>
+  </section>
 
   <!-- ══ ADMIN ANLEGEN ══════════════════════════════════════════════════ -->
   <section class="dash-section">

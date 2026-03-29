@@ -53,7 +53,7 @@ $sections = $progress['sections'] ?? [];
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Einstufungstest — <?= htmlspecialchars(APP_NAME) ?></title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css">
   <style>
     /* ── Test-spezifische Styles ── */
     :root {
@@ -600,6 +600,16 @@ $sections = $progress['sections'] ?? [];
 <?php /* ========================================================
        AKTIVER TEST
    ======================================================== */ ?>
+<?php elseif ($viewState === 'test' && !$item): ?>
+<div class="test-main" style="text-align:center;padding:3rem 1rem">
+  <span style="font-size:3rem">⚠️</span>
+  <h2 style="margin:.75rem 0 .5rem">Keine Wörter gefunden</h2>
+  <p style="color:rgba(240,232,208,.65);margin-bottom:1.5rem">
+    Für diese Klassenstufe sind noch keine Übungswörter vorhanden.<br>
+    Bitte einen Admin bitten, Wörter zu laden.
+  </p>
+  <a href="<?= url('/logout') ?>" class="btn-navbar" style="display:inline-block;padding:.65rem 1.5rem;font-size:.9rem">Abmelden</a>
+</div>
 <?php elseif ($viewState === 'test' && $item): ?>
 
 <!-- Fortschrittsbalken -->
@@ -727,7 +737,7 @@ const TEST_DATA = {
   flavorWrong:   <?= json_encode($theme['flavor_texts']['wrong']   ?? 'Noch einmal versuchen!') ?>,
 };
 </script>
-<script src="/js/test.js"></script>
+<script src="/public/js/test.js"></script>
 
 <?php /* ========================================================
        ERGEBNIS-SCREEN

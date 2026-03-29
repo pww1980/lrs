@@ -132,6 +132,78 @@ match (true) {
             (new \App\Controllers\WizardController())->handle();
         })(),
 
+    // Wortgenerierung nach Wizard (Ladeseite)
+    $uri === '/setup/generate-words' && $method === 'GET'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            $childId   = (int)($_SESSION['word_gen_child_id']   ?? 0);
+            $childName = $_SESSION['word_gen_child_name'] ?? '';
+            $startTest = $_SESSION['word_gen_start_test'] ?? false;
+            if (!$childId) { redirect('/admin/dashboard'); }
+            require BASE_DIR . '/src/Views/setup/generate_words.php';
+        })(),
+
+    // Kategorie-Liste für Batch-UI
+    $uri === '/setup/generate-words/list' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            header('Content-Type: application/json');
+            $data    = json_decode(file_get_contents('php://input'), true) ?? [];
+            if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+                http_response_code(403); echo json_encode(['error' => 'CSRF']); exit;
+            }
+            $childId = (int)($_SESSION['word_gen_child_id'] ?? 0);
+            if (!$childId) { echo json_encode(['error' => 'Kein Kind in Session']); exit; }
+            try {
+                $gen = new \App\Services\WordGeneratorService($childId);
+                echo json_encode(['categories' => $gen->getCategoryList()]);
+            } catch (\Throwable $e) {
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+            exit;
+        })(),
+
+    // Session aufräumen nach Generierung
+    $uri === '/setup/generate-words/done' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            unset($_SESSION['word_gen_child_id'], $_SESSION['word_gen_child_name'], $_SESSION['word_gen_start_test']);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => true]);
+            exit;
+        })(),
+
+    // Batch-API: 1 Kategorie generieren (AJAX)
+    $uri === '/setup/generate-words/batch' && $method === 'POST'
+        => (function () {
+            \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            header('Content-Type: application/json');
+
+            $data      = json_decode(file_get_contents('php://input'), true) ?? [];
+            if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+                http_response_code(403);
+                echo json_encode(['error' => 'CSRF']);
+                exit;
+            }
+
+            $childId  = (int)($_SESSION['word_gen_child_id'] ?? 0);
+            $category = preg_replace('/[^A-D0-9]/', '', (string)($data['category'] ?? ''));
+
+            if (!$childId || !$category) {
+                echo json_encode(['error' => 'Ungültige Parameter']);
+                exit;
+            }
+
+            try {
+                $gen    = new \App\Services\WordGeneratorService($childId);
+                $result = $gen->ensureCategory($category);
+                echo json_encode(['ok' => true, 'category' => $category, 'new_words' => $result['new_words'], 'skipped' => $result['skipped'], 'error' => $result['error'] ?? null]);
+            } catch (\Throwable $e) {
+                echo json_encode(['ok' => false, 'category' => $category, 'error' => $e->getMessage()]);
+            }
+            exit;
+        })(),
+
     // Superadmin System-Seite
     $uri === '/admin/system'
         => (function () {
@@ -209,11 +281,11 @@ match (true) {
             \App\Helpers\Auth::requireRole('admin', 'superadmin');
             \App\Helpers\Auth::verifyCsrf();
             header('Content-Type: application/json');
-            ob_start();
+            // seed_words.php direkt einbinden — im Web-Kontext lädt es keine eigenen Abhängigkeiten
+            $inserted = 0; $skipped = 0;
             require BASE_DIR . '/database/seed_words.php';
-            ob_end_clean();
             $total = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
-            echo json_encode(['success' => true, 'total' => $total]);
+            echo json_encode(['success' => true, 'inserted' => $inserted, 'skipped' => $skipped, 'total' => $total]);
             exit;
         })(),
 

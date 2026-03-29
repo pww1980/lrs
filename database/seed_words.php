@@ -8,10 +8,13 @@
  * Fügt nur fehlende Wörter ein (idempotent).
  */
 
-define('BASE_DIR', dirname(__DIR__));
-define('DATA_DIR', BASE_DIR . '/data');
-
-require BASE_DIR . '/config/app.php';
+// Beim CLI-Aufruf: Constants und DB selbst laden
+if (PHP_SAPI === 'cli') {
+    define('BASE_DIR', dirname(__DIR__));
+    define('DATA_DIR', BASE_DIR . '/data');
+    require_once BASE_DIR . '/config/app.php';
+}
+// Im Web-Kontext (require aus index.php): Constants und db() sind bereits verfügbar
 
 $words = [
 
@@ -155,7 +158,5 @@ $total = (int)$db->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColu
 if (PHP_SAPI === 'cli') {
     echo "Fertig. $inserted neue Wörter eingefügt, $skipped bereits vorhanden.\n";
     echo "Gesamt aktive Wörter in DB: $total\n";
-} else {
-    header('Content-Type: application/json');
-    echo json_encode(['inserted' => $inserted, 'skipped' => $skipped, 'total' => $total]);
 }
+// Im Web-Kontext liefert der Route-Handler die JSON-Antwort

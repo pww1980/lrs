@@ -353,25 +353,16 @@ class WizardController
             redirect('/setup/wizard');
         }
 
-        // Wizard-Session aufräumen
+        // Wizard-Session aufräumen, child_id für Wortgenerierung merken
+        $pendingChildId = $childId;
+        $pendingStart   = $startTest;
         unset($_SESSION['wizard']);
 
-        // Flash-Nachricht für Dashboard
-        $name = htmlspecialchars($d1['display_name']);
-
-        if ($startTest) {
-            $_SESSION['flash'] = [
-                'type'    => 'info',
-                'message' => "✅ $name wurde angelegt! Einstufungstest kann jetzt gestartet werden.",
-            ];
-        } else {
-            $_SESSION['flash'] = [
-                'type'    => 'success',
-                'message' => "✅ Einrichtung abgeschlossen! $name kann sich jetzt anmelden.",
-            ];
-        }
-
-        redirect('/admin/dashboard');
+        // → Wortgenerier-Seite zeigen (kein direktes Dashboard-Redirect)
+        $_SESSION['word_gen_child_id']    = $pendingChildId;
+        $_SESSION['word_gen_child_name']  = $d1['display_name'];
+        $_SESSION['word_gen_start_test']  = $pendingStart;
+        redirect('/setup/generate-words');
     }
 
     // ── View Rendering ────────────────────────────────────────────────

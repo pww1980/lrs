@@ -287,6 +287,9 @@ $formatLabel = [
                 <span class="badge badge-pending">Auswertung ausstehend</span>
               <?php else: ?>
                 <span class="badge badge-done">Ausgewertet</span>
+                <?php if ($child['progress_test']['due'] ?? false): ?>
+                  <span class="badge" style="background:#fff3e0;color:#e65100;margin-left:.25rem">⏰ Fortschritt fällig</span>
+                <?php endif; ?>
               <?php endif; ?>
             </td>
             <td>
@@ -296,6 +299,13 @@ $formatLabel = [
                 <span class="badge badge-pending">Entwurf</span>
               <?php else: ?>
                 <span style="color:var(--color-muted);font-size:.8rem">—</span>
+              <?php endif; ?>
+              <?php if ($child['analysis_status'] === 'done'): ?>
+                <a href="/admin/report/<?= (int)$child['id'] ?>"
+                   class="btn btn-sm btn-icon"
+                   title="PDF-Bericht"
+                   style="margin-left:.25rem"
+                   target="_blank">📄</a>
               <?php endif; ?>
             </td>
           </tr>
@@ -329,6 +339,38 @@ $formatLabel = [
               data-child="<?= htmlspecialchars($child['display_name']) ?>">
         🔍 Jetzt auswerten
       </button>
+    </div>
+    <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       2b. FORTSCHRITTSTEST WARNUNGEN
+  ══════════════════════════════════════════════════════════════════════ -->
+  <?php
+  $progressDueChildren = array_filter($children, fn($c) =>
+    ($c['progress_test']['due'] ?? false) &&
+    ($c['has_initial_test'] ?? false) &&
+    ($c['active_plan'] ?? null)
+  );
+  ?>
+  <?php if (!empty($progressDueChildren)): ?>
+  <section class="dash-section">
+    <div class="dash-section-title">⏰ Fortschrittstest fällig</div>
+    <?php foreach ($progressDueChildren as $child): ?>
+    <div class="pending-banner" style="border-left-color:#ff9800;">
+      <span class="pending-banner-icon">🏆</span>
+      <div class="pending-banner-text">
+        <strong><?= htmlspecialchars($child['display_name']) ?> — Fortschrittstest fällig</strong>
+        <span>
+          Letzter Test: <?= htmlspecialchars($child['progress_test']['last_test_date'] ?? '—') ?> ·
+          Intervall: <?= (int)($child['progress_test']['interval_days'] ?? 42) ?> Tage
+          <?php if ($child['progress_test']['days_overdue'] > 0): ?>
+            · <strong style="color:#c62828">+<?= (int)$child['progress_test']['days_overdue'] ?> Tage überfällig</strong>
+          <?php endif; ?>
+        </span>
+      </div>
+      <span style="font-size:.8rem;color:#888;">Kind muss selbst starten</span>
     </div>
     <?php endforeach; ?>
   </section>

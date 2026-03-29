@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Helpers\Auth;
 use App\Services\TTSService;
+use App\Services\ProgressTestService;
 
 /**
  * TestController — Einstufungstest (und später Fortschrittstests)
@@ -90,7 +91,8 @@ class TestController
 
     /**
      * POST /learn/test
-     * Startet einen neuen Einstufungstest.
+     * Startet einen neuen Einstufungs- oder Fortschrittstest.
+     * POST-Parameter: type = 'initial' | 'progress'
      */
     public static function startTest(): void
     {
@@ -98,30 +100,49 @@ class TestController
         Auth::verifyCsrf();
         $userId     = (int)$_SESSION['user_id'];
         $gradeLevel = (int)($_SESSION['grade_level'] ?? 4);
+        $type       = in_array($_POST['type'] ?? '', ['initial','progress'])
+                      ? $_POST['type'] : 'initial';
 
         // Laufende Tests abbrechen
         db()->prepare(
             "UPDATE tests SET status='aborted' WHERE user_id=? AND status IN ('pending','in_progress')"
         )->execute([$userId]);
 
+        // Beim Fortschrittstest: Wörter des letzten Tests ausschließen
+        $excludeWordIds = [];
+        if ($type === 'progress') {
+            $lastTest = db()->prepare(
+                "SELECT t.id FROM tests t WHERE t.user_id=? AND t.status='completed'
+                 ORDER BY t.completed_at DESC LIMIT 1"
+            );
+            $lastTest->execute([$userId]);
+            $lastTestRow = $lastTest->fetch();
+            if ($lastTestRow) {
+                $exStmt = db()->prepare(
+                    "SELECT DISTINCT ti.word_id FROM test_items ti
+                     JOIN test_sections ts ON ti.section_id=ts.id
+                     WHERE ts.test_id=? AND ti.word_id IS NOT NULL"
+                );
+                $exStmt->execute([$lastTestRow['id']]);
+                $excludeWordIds = $exStmt->fetchAll(\PDO::FETCH_COLUMN);
+            }
+        }
+
         $db = db();
         $db->beginTransaction();
         try {
-            // Test-Datensatz anlegen
             $db->prepare(
-                "INSERT INTO tests (user_id, type, status) VALUES (?, 'initial', 'in_progress')"
-            )->execute([$userId]);
+                "INSERT INTO tests (user_id, type, status) VALUES (?, ?, 'in_progress')"
+            )->execute([$userId, $type]);
             $testId = (int)$db->lastInsertId();
 
-            // Sektionen A → B → C → D
             foreach (['A', 'B', 'C', 'D'] as $i => $block) {
                 $db->prepare(
                     "INSERT INTO test_sections (test_id, block, status, order_index) VALUES (?, ?, 'pending', ?)"
                 )->execute([$testId, $block, $i]);
                 $sectionId = (int)$db->lastInsertId();
 
-                // Wörter für diesen Block auswählen und Items anlegen
-                $words = self::selectWordsForSection($block, $gradeLevel);
+                $words = self::selectWordsForSection($block, $gradeLevel, $excludeWordIds);
                 self::createTestItems($sectionId, $block, $words);
             }
 
@@ -451,6 +472,21 @@ class TestController
         $resultCount->execute([$testId]);
         $analysisStatus = ((int)$resultCount->fetchColumn() > 0) ? 'done' : 'pending';
 
+        // Bei Fortschrittstests: Vergleich mit vorherigem Test
+        $comparison = null;
+        if ($test['type'] === 'progress' && $analysisStatus === 'done') {
+            // Vorherigen abgeschlossenen Test (nicht dieser) suchen
+            $prevStmt = db()->prepare(
+                "SELECT id FROM tests WHERE user_id=? AND status='completed' AND id != ?
+                 ORDER BY completed_at DESC LIMIT 1"
+            );
+            $prevStmt->execute([$userId, $testId]);
+            $prevTest = $prevStmt->fetch();
+            if ($prevTest) {
+                $comparison = ProgressTestService::compareTests((int)$prevTest['id'], $testId);
+            }
+        }
+
         $theme     = self::loadTheme($_SESSION['theme'] ?? 'minecraft');
         $viewState = 'results';
         $section   = null;
@@ -513,21 +549,26 @@ class TestController
     /**
      * Wählt Wörter für eine Sektion aus. Pro Unterkategorie WORDS_PER_CATEGORY Wörter.
      * Fallback auf grade_level-unabhängige Suche wenn nicht genug Wörter vorhanden.
+     *
+     * @param array $excludeIds  Wort-IDs die ausgeschlossen werden sollen (z.B. vom letzten Test)
      */
-    private static function selectWordsForSection(string $block, int $gradeLevel): array
+    private static function selectWordsForSection(string $block, int $gradeLevel, array $excludeIds = []): array
     {
         $categories = self::BLOCK_CATEGORIES[$block] ?? [];
         $words      = [];
-        $usedIds    = [];
+        $usedIds    = $excludeIds;
 
         foreach ($categories as $category) {
-            // Zunächst mit Klassenstufen-Filter
+            $notIn  = count($usedIds)
+                      ? implode(',', array_fill(0, count($usedIds), '?'))
+                      : '0';
+
             $stmt = db()->prepare("
                 SELECT * FROM words
                 WHERE primary_category = ?
                   AND grade_level <= ?
                   AND active = 1
-                  AND id NOT IN (" . (count($usedIds) ? implode(',', array_fill(0, count($usedIds), '?')) : '0') . ")
+                  AND id NOT IN ($notIn)
                 ORDER BY RANDOM()
                 LIMIT ?
             ");
@@ -537,11 +578,14 @@ class TestController
 
             // Wenn nicht genug Wörter: ohne Klassenstufen-Filter
             if (count($found) < self::WORDS_PER_CATEGORY) {
+                $notIn2 = count($usedIds)
+                          ? implode(',', array_fill(0, count($usedIds), '?'))
+                          : '0';
                 $stmt2 = db()->prepare("
                     SELECT * FROM words
                     WHERE primary_category = ?
                       AND active = 1
-                      AND id NOT IN (" . (count($usedIds) ? implode(',', array_fill(0, count($usedIds), '?')) : '0') . ")
+                      AND id NOT IN ($notIn2)
                     ORDER BY difficulty ASC, RANDOM()
                     LIMIT ?
                 ");

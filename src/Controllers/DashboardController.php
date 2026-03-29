@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Helpers\Auth;
+use App\Services\ProgressTestService;
 
 /**
  * DashboardController — Papa-Dashboard
@@ -317,6 +318,19 @@ class DashboardController
             );
             $activePlanStmt->execute([$cid]);
             $child['active_plan'] = $activePlanStmt->fetch() ?: null;
+
+            // Fortschrittstest-Status
+            $child['progress_test'] = ProgressTestService::isDue($cid);
+            $child['has_initial_test'] = ProgressTestService::hasInitialTest($cid);
+
+            // Gesamt-Statistiken (Einheiten, Wörter)
+            $statsStmt = db()->prepare("
+                SELECT COUNT(*) AS sessions,
+                       COALESCE(SUM(correct_first_try + correct_second_try), 0) AS correct_words
+                FROM sessions WHERE user_id=? AND status='completed'
+            ");
+            $statsStmt->execute([$cid]);
+            $child['stats'] = $statsStmt->fetch();
         }
         unset($child);
 

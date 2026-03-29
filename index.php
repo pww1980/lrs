@@ -100,6 +100,10 @@ match (true) {
     str_starts_with($uri, '/admin/dashboard')
         => \App\Controllers\DashboardController::show(),
 
+    // Lehrerin-Bericht (PDF-fähige HTML-Seite)
+    preg_match('#^/admin/report/(\d+)$#', $uri, $m)
+        => \App\Controllers\ReportController::show((int)$m[1]),
+
     // Plan bestätigen (AJAX POST)
     $uri === '/admin/plan/approve' && $method === 'POST'
         => \App\Controllers\DashboardController::approvePlan(),

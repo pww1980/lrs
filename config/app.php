@@ -44,9 +44,16 @@ function db(): PDO
                 throw new RuntimeException('schema.sql nicht gefunden: ' . $schemaFile);
             }
 
-            // /data-Verzeichnis anlegen
+            // /data-Verzeichnis anlegen falls nötig
             if (!is_dir(DATA_DIR)) {
-                mkdir(DATA_DIR, 0750, true);
+                mkdir(DATA_DIR, 0755, true);
+            }
+
+            // Schreibrechte prüfen bevor wir es versuchen
+            if (!is_writable(DATA_DIR)) {
+                throw new \RuntimeException(
+                    'PERMISSIONS_ERROR:' . DATA_DIR
+                );
             }
 
             // SQLite-Datei erstellen und Schema ausführen

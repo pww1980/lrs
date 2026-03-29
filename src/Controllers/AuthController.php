@@ -24,8 +24,7 @@ class AuthController
     public function handleLogin(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: /login');
-            exit;
+            redirect('/login');
         }
 
         $username = trim($_POST['username'] ?? '');
@@ -33,8 +32,7 @@ class AuthController
 
         if ($username === '' || $password === '') {
             $_SESSION['login_error'] = 'Bitte Benutzername und Passwort eingeben.';
-            header('Location: /login');
-            exit;
+            redirect('/login');
         }
 
         $user = db()->prepare('SELECT * FROM users WHERE username = ? AND active = 1');
@@ -44,8 +42,7 @@ class AuthController
         if (!$user || !password_verify($password, $user['password_hash'])) {
             // Bewusst unspezifische Fehlermeldung (kein "User nicht gefunden")
             $_SESSION['login_error'] = 'Benutzername oder Passwort falsch.';
-            header('Location: /login');
-            exit;
+            redirect('/login');
         }
 
         // Session absichern: neue Session-ID nach Login
@@ -80,8 +77,7 @@ class AuthController
             );
         }
         session_destroy();
-        header('Location: /login');
-        exit;
+        redirect('/login');
     }
 
     // Prüft ob ein User eingeloggt ist
@@ -105,7 +101,6 @@ class AuthController
             'child'      => '/learn',
             default      => '/login',
         };
-        header('Location: ' . $target);
-        exit;
+        redirect($target);
     }
 }

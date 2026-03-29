@@ -34,6 +34,12 @@ use App\Helpers\Auth;
 // Aktuellen Pfad bestimmen
 $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $uri    = '/' . ltrim($uri, '/');
+
+// Query-Routing: /index.php?_r=/pfad (YunoHost-Kompatibilität ohne try_files)
+if (isset($_GET['_r'])) {
+    $uri = '/' . ltrim($_GET['_r'], '/');
+    unset($_GET['_r']);
+}
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 // ── Setup-Redirect: wenn noch kein Superadmin existiert ──────────────
@@ -46,13 +52,11 @@ if ($uri !== '/setup' && !$isStaticPath) {
     try {
         $count = db()->query("SELECT COUNT(*) FROM users WHERE role = 'superadmin'")->fetchColumn();
         if ((int)$count === 0) {
-            header('Location: /setup');
-            exit;
+            redirect('/setup');
         }
     } catch (\RuntimeException) {
         // Datenbank noch nicht angelegt
-        header('Location: /setup');
-        exit;
+        redirect('/setup');
     }
 }
 
@@ -85,8 +89,7 @@ match (true) {
             if (\App\Controllers\AuthController::isLoggedIn()) {
                 \App\Controllers\AuthController::redirectByRole();
             } else {
-                header('Location: /login');
-                exit;
+                redirect('/login');
             }
         })(),
 

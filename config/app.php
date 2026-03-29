@@ -59,3 +59,27 @@ if (APP_ENV === 'development') {
     ini_set('display_errors', '0');
     error_reporting(0);
 }
+
+/**
+ * Generiert eine interne URL als /index.php?_r=/pfad damit die App
+ * ohne nginx try_files funktioniert (YunoHost Custom Webapp).
+ * Statische Assets (CSS/JS) direkt übergeben — diese Funktion NICHT für Assets nutzen.
+ */
+function url(string $path): string
+{
+    $parts = explode('?', $path, 2);
+    $qs    = '_r=' . rawurlencode($parts[0]);
+    if (isset($parts[1])) {
+        $qs .= '&' . $parts[1];
+    }
+    return '/index.php?' . $qs;
+}
+
+/**
+ * Redirect-Helper für interne Weiterleitungen.
+ */
+function redirect(string $path): never
+{
+    header('Location: ' . url($path));
+    exit;
+}

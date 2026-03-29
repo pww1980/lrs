@@ -227,7 +227,7 @@ $formatLabel = [
 <nav class="navbar">
   <span class="navbar-brand">⛏️ <?= htmlspecialchars(APP_NAME) ?></span>
   <span class="navbar-user">👤 <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?></span>
-  <a href="/logout" class="btn btn-sm">Abmelden</a>
+  <a href="<?= url('/logout') ?>" class="btn btn-sm">Abmelden</a>
 </nav>
 
 <main class="container">
@@ -249,10 +249,10 @@ $formatLabel = [
       <div class="empty-state">
         <span class="empty-state-icon">👶</span>
         Noch keine Kinder angelegt.
-        <br><a href="/setup/wizard" class="btn btn-primary" style="margin-top:.75rem;display:inline-block">Kind hinzufügen</a>
+        <br><a href="<?= url('/setup/wizard') ?>" class="btn btn-primary" style="margin-top:.75rem;display:inline-block">Kind hinzufügen</a>
       </div>
     <?php else: ?>
-      <a href="/setup/wizard" class="btn btn-secondary btn-sm" style="margin-bottom:.75rem">+ Kind hinzufügen</a>
+      <a href="<?= url('/setup/wizard') ?>" class="btn btn-secondary btn-sm" style="margin-bottom:.75rem">+ Kind hinzufügen</a>
       <table class="children-table">
         <thead>
           <tr>
@@ -302,7 +302,7 @@ $formatLabel = [
                 <span style="color:var(--color-muted);font-size:.8rem">—</span>
               <?php endif; ?>
               <?php if ($child['analysis_status'] === 'done'): ?>
-                <a href="/admin/report/<?= (int)$child['id'] ?>"
+                <a href="<?= url('/admin/report/' . (int)$child['id']) ?>"
                    class="btn btn-sm btn-icon"
                    title="PDF-Bericht"
                    style="margin-left:.25rem"

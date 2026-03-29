@@ -442,7 +442,7 @@ if ($session) {
       Kat. <?= htmlspecialchars($unit['category'] ?? '') ?>
     </div>
   </div>
-  <a href="/learn/questlog" class="back-link">← Karte</a>
+  <a href="<?= url('/learn/questlog') ?>" class="back-link">← Karte</a>
 </header>
 
 <!-- Progress bar -->
@@ -476,7 +476,7 @@ if ($session) {
       <span class="meta-chip">🎯 <?= (int)$unit['word_count'] ?> Wörter</span>
       <span class="meta-chip">⭐ Schwierigkeit <?= (int)$unit['difficulty'] ?></span>
     </div>
-    <form method="POST" action="/learn/session/start">
+    <form method="POST" action="<?= url('/learn/session/start') ?>">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
       <input type="hidden" name="unit_id"   value="<?= (int)$unit['id'] ?>">
       <button type="submit" class="btn-practice" style="padding:1rem 2.5rem;font-size:1.1rem;">

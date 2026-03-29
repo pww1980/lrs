@@ -19,8 +19,7 @@ class Auth
         if (!isset($_SESSION['user_id'])) {
             // Ursprüngliche URL merken für Post-Login-Redirect
             $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? '/';
-            header('Location: /login');
-            exit;
+            redirect('/login');
         }
     }
 

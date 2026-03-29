@@ -19,7 +19,7 @@ $encKeyOk = strlen(APP_ENCRYPTION_KEY) >= 16
   </div>
 <?php endif; ?>
 
-<form method="post" action="/setup/wizard" novalidate class="wizard-form">
+<form method="post" action="<?= url('/setup/wizard') ?>" novalidate class="wizard-form">
   <input type="hidden" name="csrf_token"    value="<?= htmlspecialchars($csrfToken) ?>">
   <input type="hidden" name="wizard_action" value="next">
 

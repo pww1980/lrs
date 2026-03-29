@@ -210,7 +210,7 @@ function severityFill(string $sev): string {
 <div class="print-bar no-print">
   <h1>📄 Bericht für die Lehrerin</h1>
   <button class="btn-print" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
-  <a href="/admin/dashboard" class="back-link">← Dashboard</a>
+  <a href="<?= url('/admin/dashboard') ?>" class="back-link">← Dashboard</a>
 </div>
 
 <div class="page">

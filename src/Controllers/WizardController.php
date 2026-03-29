@@ -55,8 +55,7 @@ class WizardController
         )->fetchColumn();
 
         if ($childCount > 0) {
-            header('Location: /admin/dashboard');
-            exit;
+            redirect('/admin/dashboard');
         }
 
         // Session initialisieren
@@ -86,8 +85,7 @@ class WizardController
             $step = (int) ($_SESSION['wizard']['current_step'] ?? 1);
             $_SESSION['wizard']['current_step'] = max(1, $step - 1);
             $_SESSION['wizard']['errors'] = [];
-            header('Location: /setup/wizard');
-            exit;
+            redirect('/setup/wizard');
         }
 
         $step = (int) ($_SESSION['wizard']['current_step'] ?? 1);
@@ -103,8 +101,7 @@ class WizardController
 
         // processStep5 leitet selbst weiter; alle anderen → zurück zum Wizard
         if ($step < 5) {
-            header('Location: /setup/wizard');
-            exit;
+            redirect('/setup/wizard');
         }
     }
 
@@ -285,8 +282,7 @@ class WizardController
         // Pflichtdaten prüfen (sollten durch vorherige Steps gesetzt sein)
         if (empty($_SESSION['wizard']['step1']) || empty($_SESSION['wizard']['step2'])) {
             $_SESSION['wizard']['current_step'] = 1;
-            header('Location: /setup/wizard');
-            exit;
+            redirect('/setup/wizard');
         }
 
         $startTest = ($action === 'start_test');
@@ -362,8 +358,7 @@ class WizardController
                 . ' — Bitte erneut versuchen oder APP_ENCRYPTION_KEY in .env prüfen.',
             ];
             $_SESSION['wizard']['current_step'] = 5;
-            header('Location: /setup/wizard');
-            exit;
+            redirect('/setup/wizard');
         }
 
         // Wortgenerierung anstoßen (nach DB-Commit, nicht Teil der Transaktion)
@@ -402,8 +397,7 @@ class WizardController
             ];
         }
 
-        header('Location: /admin/dashboard');
-        exit;
+        redirect('/admin/dashboard');
     }
 
     // ── View Rendering ────────────────────────────────────────────────

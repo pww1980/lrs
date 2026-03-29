@@ -58,7 +58,7 @@
     ttsStatus.textContent = 'Wort wird geladen…';
     ttsIcon.classList.remove('playing');
 
-    fetch(`/learn/test/tts?item_id=${itemId}&speed=${speed}`)
+    fetch(`/index.php?_r=%2Flearn%2Ftest%2Ftts&item_id=${itemId}&speed=${speed}`)
       .then(r => {
         const ct = r.headers.get('Content-Type') || '';
         if (ct.includes('application/json')) {
@@ -166,7 +166,7 @@
 
     const responseTime = timerStart ? (Date.now() - timerStart) : 0;
 
-    fetch('/learn/test/answer', {
+    fetch('/index.php?_r=%2Flearn%2Ftest%2Fanswer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -243,7 +243,7 @@
     setState('loading');
     ttsStatus.textContent = 'Sektion wird gespeichert…';
 
-    fetch('/learn/test/section-complete', {
+    fetch('/index.php?_r=%2Flearn%2Ftest%2Fsection-complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -311,12 +311,12 @@
 
   function pauseAndGoHome() {
     stopAudio();
-    fetch('/learn/test/pause', {
+    fetch('/index.php?_r=%2Flearn%2Ftest%2Fpause', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf_token: TEST_DATA.csrfToken }),
     }).finally(() => {
-      window.location.href = '/learn';
+      window.location.href = '/index.php?_r=%2Flearn';
     });
   }
 
@@ -375,7 +375,7 @@
   btnNextSection.addEventListener('click', () => {
     sectionTransition.classList.remove('visible');
     if (nextSectionData && nextSectionData.test_done) {
-      window.location.href = '/learn/test/results?test_id=' +
+      window.location.href = '/index.php?_r=%2Flearn%2Ftest%2Fresults&test_id=' +
         (document.querySelector('[data-test-id]')?.dataset.testId || '');
       // Fallback: Seite neu laden, Controller erkennt finished state
       window.location.reload();

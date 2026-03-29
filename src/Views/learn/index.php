@@ -19,8 +19,7 @@ $activeTestStmt = db()->prepare(
 );
 $activeTestStmt->execute([$userId]);
 if ($activeTestStmt->fetch()) {
-    header('Location: /learn/test');
-    exit;
+    redirect('/learn/test');
 }
 
 // 2. Abgeschlossener Test vorhanden?
@@ -31,8 +30,7 @@ $doneTestStmt->execute([$userId]);
 $doneTest = $doneTestStmt->fetch();
 
 if (!$doneTest) {
-    header('Location: /learn/test');
-    exit;
+    redirect('/learn/test');
 }
 
 // 3. Aktiver Plan vorhanden?
@@ -49,8 +47,7 @@ if ($activePlan && $progressDue['due']) {
     // Hinweis anzeigen — kein automatischer Redirect, Kind entscheidet
     // (wird unten in der Seite behandelt)
 } elseif ($activePlan) {
-    header('Location: /learn/questlog');
-    exit;
+    redirect('/learn/questlog');
 }
 
 $pageTitle = 'Lernen — ' . APP_NAME;
@@ -168,12 +165,12 @@ if ($activePlan && $progressDue['due']) {
         Zeit zu sehen wie weit du gekommen bist!<br>
         Der Test dauert ca. 10 Minuten.
       </p>
-      <form method="POST" action="/learn/test">
+      <form method="POST" action="<?= url('/learn/test') ?>">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
         <input type="hidden" name="type"       value="progress">
         <button type="submit" class="btn-start">Fortschrittstest starten 🚀</button>
       </form>
-      <a href="/learn/questlog" class="btn-later">Später — weiter üben</a>
+      <a href="<?= url('/learn/questlog') ?>" class="btn-later">Später — weiter üben</a>
 
     <?php elseif ($hasAnalysis): ?>
       <div class="wait-icon">⏳</div>
@@ -189,7 +186,7 @@ if ($activePlan && $progressDue['due']) {
       <script>setTimeout(function(){ window.location.reload(); }, 30000);</script>
     <?php endif; ?>
 
-    <a href="/logout" class="logout-link">Abmelden</a>
+    <a href="<?= url('/logout') ?>" class="logout-link">Abmelden</a>
   </div>
 </div>
 </body>

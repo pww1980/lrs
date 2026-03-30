@@ -309,6 +309,15 @@ $formatLabel = [
                    style="margin-left:.25rem"
                    target="_blank">📄</a>
               <?php endif; ?>
+              <?php if ($child['analysis_status'] === 'done' && !$child['active_plan'] && !$child['draft_plan']): ?>
+                <button class="btn btn-sm btn-primary"
+                        style="margin-left:.25rem;font-size:.75rem"
+                        onclick="runAnalysis(<?= (int)$child['latest_test']['id'] ?>, this, true)"
+                        data-child="<?= htmlspecialchars($child['display_name']) ?>"
+                        title="Lernplan neu generieren (Analyse bereits vorhanden)">
+                  ♻️ Plan
+                </button>
+              <?php endif; ?>
             </td>
             <td>
               <a href="<?= url('/admin/child/' . (int)$child['id'] . '/edit') ?>"
@@ -805,6 +814,8 @@ $formatLabel = [
 
 <script>
 const CSRF = <?= json_encode($csrfToken) ?>;
+const URL_ANALYSIS_STEP1 = <?= json_encode(url('/admin/analysis/step1')) ?>;
+const URL_ANALYSIS_STEP2 = <?= json_encode(url('/admin/analysis/step2')) ?>;
 const URL_ANALYSIS_RUN   = <?= json_encode(url('/admin/analysis/run')) ?>;
 const URL_QUEST_TOGGLE   = <?= json_encode(url('/admin/plan/quest-toggle')) ?>;
 const URL_PLAN_APPROVE   = <?= json_encode(url('/admin/plan/approve')) ?>;
@@ -816,36 +827,73 @@ function showToast(msg, type = 'success') {
   setTimeout(() => { t.className = ''; }, 3500);
 }
 
-// ── Auswertung starten (Admin-seitig) ──────────────────────────────────
-function runAnalysis(testId, btn) {
-  const child = btn.dataset.child || 'Kind';
-  btn.disabled    = true;
-  btn.textContent = '⏳ Läuft…';
+// ── Auswertung starten (Admin-seitig, 2-Schritt) ──────────────────────
+function runAnalysis(testId, btn, planOnly = false) {
+  const child       = btn.dataset.child || 'Kind';
+  const origLabel   = btn.textContent;
+  btn.disabled      = true;
 
-  fetch(URL_ANALYSIS_RUN, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ csrf_token: CSRF, test_id: testId }),
-  })
-    .then(r => r.text().then(txt => {
+  function postJSON(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => r.text().then(txt => {
       try { return JSON.parse(txt); }
-      catch(e) { throw new Error('Server-Antwort kein JSON: ' + txt.substring(0, 120)); }
-    }))
-    .then(data => {
-      if (data.success || data.already_done) {
+      catch(e) { throw new Error('Server-Antwort kein JSON: ' + txt.substring(0, 200)); }
+    }));
+  }
+
+  function onError(msg) {
+    showToast('❌ Fehler: ' + msg, 'error');
+    btn.disabled    = false;
+    btn.textContent = origLabel;
+  }
+
+  if (planOnly) {
+    // Nur Schritt 2 (test_results vorhanden, nur Plan fehlt)
+    btn.textContent = '⏳ Plan wird erstellt…';
+    postJSON(URL_ANALYSIS_STEP2, { csrf_token: CSRF, test_id: testId, child_id: 0 })
+      .then(d => {
+        if (d.success) {
+          showToast('✅ Plan für ' + child + ' erstellt. Seite wird neu geladen…');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          onError(d.message || d.error || 'Unbekannter Fehler');
+        }
+      })
+      .catch(err => onError(err.message || 'Netzwerkfehler'));
+    return;
+  }
+
+  // Schritt 1: Fehleranalyse
+  btn.textContent = '⏳ Schritt 1/2: Analysiere…';
+  postJSON(URL_ANALYSIS_STEP1, { csrf_token: CSRF, test_id: testId })
+    .then(d1 => {
+      if (d1.already_done) {
+        // Analyse schon vorhanden → direkt Plan erstellen
+        btn.textContent = '⏳ Schritt 2/2: Plan wird erstellt…';
+        return postJSON(URL_ANALYSIS_STEP2, {
+          csrf_token: CSRF, test_id: d1.test_id || testId, child_id: d1.child_id || 0,
+        });
+      }
+      if (!d1.success) throw new Error(d1.message || d1.error || 'Schritt 1 fehlgeschlagen');
+
+      // Schritt 2: Plan generieren
+      btn.textContent = '⏳ Schritt 2/2: Plan wird erstellt…';
+      return postJSON(URL_ANALYSIS_STEP2, {
+        csrf_token: CSRF, test_id: d1.test_id, child_id: d1.child_id,
+      });
+    })
+    .then(d2 => {
+      if (d2 && (d2.success || d2.already_done)) {
         showToast('✅ Auswertung für ' + child + ' abgeschlossen. Seite wird neu geladen…');
         setTimeout(() => location.reload(), 1500);
-      } else {
-        showToast('❌ Fehler: ' + (data.message || data.error), 'error');
-        btn.disabled    = false;
-        btn.textContent = '🔍 Jetzt auswerten';
+      } else if (d2) {
+        onError(d2.message || d2.error || 'Schritt 2 fehlgeschlagen');
       }
     })
-    .catch(err => {
-      showToast('❌ Serverfehler: ' + (err.message || 'unbekannt'), 'error');
-      btn.disabled    = false;
-      btn.textContent = '🔍 Jetzt auswerten';
-    });
+    .catch(err => onError(err.message || 'Netzwerkfehler'));
 }
 
 // ── Quest ein-/ausschalten ─────────────────────────────────────────────

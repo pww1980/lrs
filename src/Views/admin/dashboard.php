@@ -313,6 +313,8 @@ $formatLabel = [
             <td>
               <a href="<?= url('/admin/child/' . (int)$child['id'] . '/edit') ?>"
                  class="btn btn-sm btn-secondary" title="Profil bearbeiten">✏️</a>
+              <a href="<?= url('/admin/words?child_id=' . (int)$child['id']) ?>"
+                 class="btn btn-sm btn-secondary" title="Wortliste" style="margin-left:.25rem">📝</a>
             </td>
           </tr>
           <?php endforeach; ?>

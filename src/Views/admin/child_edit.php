@@ -94,6 +94,28 @@
         </div>
       </div>
 
+      <!-- TTS Geschwindigkeit -->
+      <div class="section-label">Vorlese-Geschwindigkeit</div>
+      <?php $currentSpeed = $childSettings['tts_speed'] ?? 'normal'; ?>
+      <div class="form-group">
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="tts_speed" id="speed_normal" value="normal"
+                   <?= $currentSpeed === 'normal' ? 'checked' : '' ?>>
+            <label for="speed_normal">▶ Normal</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="tts_speed" id="speed_slow" value="slow"
+                   <?= $currentSpeed === 'slow' ? 'checked' : '' ?>>
+            <label for="speed_slow">🐢 Langsam</label>
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--color-muted);margin:.4rem 0 0">
+          Bestimmt die Standard-Abspielgeschwindigkeit beim Diktat.
+          Das Kind kann jederzeit zwischen Normal und Langsam wechseln.
+        </p>
+      </div>
+
       <!-- Aktiv -->
       <div class="section-label">Status</div>
       <div class="form-group" style="display:flex;align-items:center;gap:.5rem">

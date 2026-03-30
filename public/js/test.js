@@ -22,6 +22,7 @@
   const feedbackEmoji    = document.getElementById('feedback-emoji');
   const feedbackMain     = document.getElementById('feedback-main');
   const feedbackAnswer   = document.getElementById('feedback-answer');
+  const feedbackRule     = document.getElementById('feedback-rule');
   const feedbackCountdown = document.getElementById('feedback-countdown');
   const sectionTransition = document.getElementById('section-transition');
   const trBiomeIcon      = document.getElementById('tr-biome-icon');
@@ -47,6 +48,12 @@
   let nextSectionData = null;  // wird nach completeSection gesetzt
 
   // ── Initialisierung ──────────────────────────────────────────────────────
+  // Browser-TTS Stimmen vorab laden (Chrome lädt sie asynchron)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = function() { window.speechSynthesis.getVoices(); };
+  }
+
   updateCounter();
   loadAndPlayTts(currentItemId, 'normal');
 
@@ -138,11 +145,19 @@
     ttsStatus.textContent = '🔊 Hör genau zu…';
 
     window.speechSynthesis.cancel();
-    browserUtter          = new SpeechSynthesisUtterance(text);
-    browserUtter.lang     = lang;
-    browserUtter.rate     = rate;
-    browserUtter.onend    = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
-    browserUtter.onerror  = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
+    browserUtter      = new SpeechSynthesisUtterance(text);
+    browserUtter.lang = lang;
+    browserUtter.rate = rate;
+
+    // Deutsche Stimme explizit wählen (verhindert amerikanischen Akzent)
+    var voices = window.speechSynthesis.getVoices();
+    var deVoice = voices.find(v => v.lang === 'de-DE')
+               || voices.find(v => v.lang.startsWith('de'))
+               || null;
+    if (deVoice) browserUtter.voice = deVoice;
+
+    browserUtter.onend  = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
+    browserUtter.onerror = () => { ttsIcon.classList.remove('playing'); enableAnswering(); };
     window.speechSynthesis.speak(browserUtter);
   }
 
@@ -236,10 +251,17 @@
       feedbackAnswer.textContent = '';
     }
 
+    // Regel-Erklärung bei falscher Antwort
+    if (data.rule_hint) {
+      feedbackRule.textContent = data.rule_hint;
+    } else {
+      feedbackRule.textContent = '';
+    }
+
     feedbackOverlay.classList.add('visible');
 
-    // Countdown 2 → 1 → weiter
-    let secs = 2;
+    // Bei Fehler 4s, sonst 2s
+    let secs = data.correct ? 2 : 4;
     feedbackCountdown.textContent = secs;
     clearTimeout(feedbackTimer);
     clearInterval(countdownTimer);

@@ -330,6 +330,18 @@ $sections = $progress['sections'] ?? [];
     .feedback-main   { font-size: 1.15rem; font-weight: 700; margin-bottom: .5rem; }
     .feedback-answer { font-size: .95rem; color: rgba(240,232,208,.75); }
     .feedback-answer strong { color: var(--mc-surface); }
+    .feedback-rule {
+      font-size: .82rem;
+      color: rgba(240,232,208,.6);
+      background: rgba(255,255,255,.06);
+      border-left: 3px solid var(--mc-accent);
+      border-radius: 0 6px 6px 0;
+      padding: .5rem .75rem;
+      margin-top: .65rem;
+      text-align: left;
+      display: none;
+    }
+    .feedback-box.wrong .feedback-rule { display: block; }
     .feedback-next   {
       margin-top: 1rem;
       font-size: .8rem;
@@ -704,6 +716,7 @@ $sections = $progress['sections'] ?? [];
     <span class="feedback-emoji" id="feedback-emoji"></span>
     <div class="feedback-main"  id="feedback-main"></div>
     <div class="feedback-answer" id="feedback-answer"></div>
+    <div class="feedback-rule"  id="feedback-rule"></div>
     <div class="feedback-next">Weiter in <span id="feedback-countdown">2</span> s …</div>
   </div>
 </div>

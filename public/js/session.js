@@ -16,6 +16,12 @@
 
   // ── DOM refs ──────────────────────────────────────────────────────────
 
+  // Browser-TTS Stimmen vorab laden (Chrome lädt sie asynchron)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = function() { window.speechSynthesis.getVoices(); };
+  }
+
   var ttsBtn        = document.getElementById('tts-btn');
   var ttsBtnIcon    = document.getElementById('tts-icon');
   var ttsBtnLabel   = document.getElementById('tts-label');
@@ -171,6 +177,14 @@
     var utt = new SpeechSynthesisUtterance(cfg.text || '');
     utt.lang  = cfg.lang  || 'de-DE';
     utt.rate  = cfg.rate  || 1.0;
+
+    // Deutsche Stimme explizit wählen
+    var voices = window.speechSynthesis.getVoices();
+    var deVoice = voices.find(function(v) { return v.lang === 'de-DE'; })
+               || voices.find(function(v) { return v.lang.startsWith('de'); })
+               || null;
+    if (deVoice) utt.voice = deVoice;
+
     utt.onend   = onTtsEnded;
     utt.onerror = onTtsEnded;
     ttsSpeech = utt;

@@ -109,6 +109,9 @@ class AnalysisController
     public static function runForAdmin(): void
     {
         Auth::requireRole('admin', 'superadmin');
+        // PHP-Warnungen/-Notices nicht in den JSON-Output mischen
+        ini_set('display_errors', '0');
+        ob_start();
         header('Content-Type: application/json');
         set_time_limit(180);
 
@@ -162,10 +165,12 @@ class AnalysisController
 
         try {
             $result = self::runAnalysis($testId, (int)$row['child_id'], $adminId);
+            ob_end_clean();
             echo json_encode(['success' => true, 'plan_id' => $result['plan_id']]);
         } catch (\Throwable $e) {
-            error_log('AnalysisController::runForAdmin — ' . $e->getMessage());
-            http_response_code(500);
+            $spurious = ob_get_clean();
+            error_log('AnalysisController::runForAdmin — ' . $e->getMessage()
+                . ($spurious ? ' | spurious output: ' . substr($spurious, 0, 200) : ''));
             echo json_encode(['error' => true, 'message' => $e->getMessage()]);
         }
         exit;

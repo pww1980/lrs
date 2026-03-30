@@ -270,10 +270,10 @@ match (true) {
 
     // Kind bearbeiten
     preg_match('#^/admin/child/(\d+)/edit$#', $uri, $m) && $method === 'GET'
-        => \App\Controllers\DashboardController::editChild(),
+        => \App\Controllers\DashboardController::editChild((int)$m[1]),
 
     preg_match('#^/admin/child/(\d+)/edit$#', $uri, $m) && $method === 'POST'
-        => \App\Controllers\DashboardController::updateChild(),
+        => \App\Controllers\DashboardController::updateChild((int)$m[1]),
 
     // Seed words (Admin, per Browser aufrufbar)
     $uri === '/admin/seed-words' && $method === 'POST'

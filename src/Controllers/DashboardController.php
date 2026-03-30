@@ -395,11 +395,10 @@ class DashboardController
      * GET /admin/child/{id}/edit
      * Zeigt Bearbeitungsformular für ein Kind.
      */
-    public static function editChild(): void
+    public static function editChild(int $childId = 0): void
     {
         Auth::requireRole('admin', 'superadmin');
         $adminId = (int)$_SESSION['user_id'];
-        $childId = (int)($_GET['id'] ?? 0);
 
         $child = self::loadChildForAdmin($adminId, $childId);
         if (!$child) {
@@ -422,13 +421,13 @@ class DashboardController
      * POST /admin/child/{id}/edit
      * Speichert Änderungen am Kindprofil.
      */
-    public static function updateChild(): void
+    public static function updateChild(int $childId = 0): void
     {
         Auth::requireRole('admin', 'superadmin');
         Auth::verifyCsrf();
 
         $adminId = (int)$_SESSION['user_id'];
-        $childId = (int)($_POST['child_id'] ?? 0);
+        if ($childId === 0) $childId = (int)($_POST['child_id'] ?? 0);
 
         $child = self::loadChildForAdmin($adminId, $childId);
         if (!$child) {
@@ -470,7 +469,7 @@ class DashboardController
     /** Lädt ein Kind nur wenn der Admin Zugriff hat (oder Superadmin). */
     private static function loadChildForAdmin(int $adminId, int $childId): ?array
     {
-        $role = $_SESSION['role'] ?? '';
+        $role = $_SESSION['user_role'] ?? '';
         if ($role === 'superadmin') {
             $stmt = db()->prepare("SELECT * FROM users WHERE id=? AND role='child'");
             $stmt->execute([$childId]);

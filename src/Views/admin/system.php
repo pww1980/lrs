@@ -36,6 +36,7 @@ $wordCount = (int)db()->query("SELECT COUNT(*) FROM words WHERE active=1")->fetc
 <nav class="navbar">
   <span class="navbar-brand"><?= htmlspecialchars(APP_NAME) ?></span>
   <span class="navbar-user">⭐ <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?> (Superadmin)</span>
+  <a href="<?= url('/admin/dashboard') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">📊 Papa-Dashboard</a>
   <a href="<?= url('/logout') ?>" class="btn btn-sm">Abmelden</a>
 </nav>
 <main class="container" style="max-width:900px">

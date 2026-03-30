@@ -822,7 +822,10 @@ function runAnalysis(testId, btn) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ csrf_token: CSRF, test_id: testId }),
   })
-    .then(r => r.json())
+    .then(r => r.text().then(txt => {
+      try { return JSON.parse(txt); }
+      catch(e) { throw new Error('Server-Antwort kein JSON: ' + txt.substring(0, 120)); }
+    }))
     .then(data => {
       if (data.success || data.already_done) {
         showToast('✅ Auswertung für ' + child + ' abgeschlossen. Seite wird neu geladen…');
@@ -833,8 +836,8 @@ function runAnalysis(testId, btn) {
         btn.textContent = '🔍 Jetzt auswerten';
       }
     })
-    .catch(() => {
-      showToast('❌ Netzwerkfehler.', 'error');
+    .catch(err => {
+      showToast('❌ Serverfehler: ' + (err.message || 'unbekannt'), 'error');
       btn.disabled    = false;
       btn.textContent = '🔍 Jetzt auswerten';
     });

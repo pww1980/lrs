@@ -303,7 +303,7 @@ match (true) {
         => \App\Controllers\WordController::add(),
 
     // Lehrerin-Bericht (PDF-fähige HTML-Seite)
-    preg_match('#^/admin/report/(\d+)$#', $uri, $m)
+    preg_match('#^/admin/report/(\d+)$#', $uri, $m) && $method === 'GET'
         => \App\Controllers\ReportController::show((int)$m[1]),
 
     // TTS-Cache vorwärmen (AJAX GET, Admin)
@@ -381,7 +381,15 @@ match (true) {
     $uri === '/admin/plan/quest-toggle' && $method === 'POST'
         => \App\Controllers\DashboardController::toggleQuest(),
 
-    // KI-Auswertung (Admin-seitig, AJAX POST)
+    // KI-Auswertung (Admin-seitig, AJAX POST) — Schritt 1: Fehleranalyse
+    $uri === '/admin/analysis/step1' && $method === 'POST'
+        => \App\Controllers\AnalysisController::step1ForAdmin(),
+
+    // KI-Auswertung (Admin-seitig, AJAX POST) — Schritt 2: Plan generieren
+    $uri === '/admin/analysis/step2' && $method === 'POST'
+        => \App\Controllers\AnalysisController::step2ForAdmin(),
+
+    // KI-Auswertung (Admin-seitig, AJAX POST) — Legacy-Endpunkt
     $uri === '/admin/analysis/run' && $method === 'POST'
         => \App\Controllers\AnalysisController::runForAdmin(),
 

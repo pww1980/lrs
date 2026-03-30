@@ -10,16 +10,11 @@ use App\Services\EncryptionService;
  * AnalysisController — KI-Auswertung nach Testabschluss
  *
  * Routen:
- *   POST /learn/test/analyze   → runForChild()   (Kind-Session)
- *   POST /admin/analysis/run   → runForAdmin()   (Admin-Session)
+ *   POST /learn/test/analyze      → runForChild()   (Kind-Session, beide Schritte)
+ *   POST /admin/analysis/step1    → step1ForAdmin()  (Fehleranalyse, ~30s)
+ *   POST /admin/analysis/step2    → step2ForAdmin()  (Plan generieren, ~30s)
  *
- * Ablauf:
- *   1. Test-Items laden (mit korrekten Antworten aus words-Tabelle)
- *   2. AIService::analyzeTest() → Fehlerprofil
- *   3. test_results speichern (eine Zeile pro Kategorie)
- *   4. AIService::generatePlan() → Lernplan
- *   5. learning_plans + plan_biomes + quests + plan_units speichern
- *   6. learning_plan.status = 'draft' (Admin muss bestätigen)
+ * Aufgeteilt in zwei Steps um Gateway-Timeout (504) zu vermeiden.
  */
 class AnalysisController
 {
@@ -176,6 +171,156 @@ class AnalysisController
         exit;
     }
 
+    /**
+     * POST /admin/analysis/step1  — Schritt 1: Fehleranalyse (~30s)
+     * Lädt Items, ruft AIService::analyzeTest() auf, speichert test_results.
+     */
+    public static function step1ForAdmin(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        ini_set('display_errors', '0');
+        ob_start();
+        header('Content-Type: application/json');
+        set_time_limit(120);
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            ob_end_clean();
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF-Fehler']);
+            exit;
+        }
+
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $testId       = (int)($data['test_id'] ?? 0);
+
+        $row = self::fetchTestForAdmin($testId, $adminId, $isSuperadmin);
+        if (!$row) {
+            ob_end_clean();
+            http_response_code(404);
+            echo json_encode(['error' => 'Test nicht gefunden']);
+            exit;
+        }
+
+        if (self::hasExistingAnalysis($testId)) {
+            ob_end_clean();
+            echo json_encode(['already_done' => true, 'plan_id' => self::getPlanId($testId)]);
+            exit;
+        }
+
+        try {
+            $childId = (int)$row['child_id'];
+            $ai      = self::makeAIService($childId, $adminId);
+            [$testMeta, $userProfile, $items] = self::loadTestContext($testId, $childId);
+
+            if (empty($items)) {
+                throw new \RuntimeException("Keine beantworteten Items für Test {$testId} gefunden.");
+            }
+            $analysisResult = $ai->analyzeTest($testMeta, $items, $userProfile, $testId);
+            self::saveTestResults($testId, $analysisResult['results']);
+
+            ob_end_clean();
+            echo json_encode([
+                'success'  => true,
+                'test_id'  => $testId,
+                'child_id' => $childId,
+            ]);
+        } catch (\Throwable $e) {
+            $spurious = ob_get_clean();
+            error_log('AnalysisController::step1 — ' . $e->getMessage()
+                . ($spurious ? ' | extra: ' . substr($spurious, 0, 200) : ''));
+            echo json_encode(['error' => true, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * POST /admin/analysis/step2  — Schritt 2: Lernplan generieren (~30s)
+     * Lädt gespeicherte test_results, ruft AIService::generatePlan() auf, speichert Plan.
+     */
+    public static function step2ForAdmin(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        ini_set('display_errors', '0');
+        ob_start();
+        header('Content-Type: application/json');
+        set_time_limit(120);
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            ob_end_clean();
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF-Fehler']);
+            exit;
+        }
+
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $testId       = (int)($data['test_id']  ?? 0);
+        $childId      = (int)($data['child_id'] ?? 0);
+
+        // child_id not provided (planOnly mode) — resolve from test
+        if (!$childId && $testId) {
+            $row = self::fetchTestForAdmin($testId, $adminId, $isSuperadmin);
+            if ($row) $childId = (int)$row['child_id'];
+        }
+
+        if (!$childId) {
+            ob_end_clean();
+            http_response_code(404);
+            echo json_encode(['error' => 'Kind nicht ermittelt']);
+            exit;
+        }
+
+        try {
+            $ai = self::makeAIService($childId, $adminId);
+            [, $userProfile,] = self::loadTestContext($testId, $childId);
+
+            // Gespeicherte test_results laden
+            $savedResults = db()->prepare(
+                "SELECT block, category, error_rate, severity, strategy_level
+                 FROM test_results WHERE test_id=?"
+            );
+            $savedResults->execute([$testId]);
+            $results = $savedResults->fetchAll();
+
+            if (empty($results)) {
+                throw new \RuntimeException('Keine Analyseergebnisse gefunden. Bitte Schritt 1 erneut ausführen.');
+            }
+
+            $analysisResult = [
+                'results'            => $results,
+                'overall_notes'      => '',
+                'fatigue_detected'   => false,
+                'recommended_blocks' => [],
+            ];
+
+            $planResult = $ai->generatePlan($analysisResult, $userProfile, $testId);
+
+            $severityMap = [];
+            $strategyMap = [];
+            foreach ($results as $r) {
+                $severityMap[$r['category']] = $r['severity']      ?? 'none';
+                $strategyMap[$r['category']] = (int)($r['strategy_level'] ?? 1);
+            }
+
+            $planId = self::saveLearningPlan(
+                $testId, $childId, $planResult, $severityMap, $strategyMap,
+                $planResult['overall_notes'] ?? ''
+            );
+
+            ob_end_clean();
+            echo json_encode(['success' => true, 'plan_id' => $planId]);
+        } catch (\Throwable $e) {
+            $spurious = ob_get_clean();
+            error_log('AnalysisController::step2 — ' . $e->getMessage()
+                . ($spurious ? ' | extra: ' . substr($spurious, 0, 200) : ''));
+            echo json_encode(['error' => true, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     // ── Kern-Logik ────────────────────────────────────────────────────────
 
     /**
@@ -268,6 +413,85 @@ class AnalysisController
     }
 
     // ── Private Hilfsmethoden ─────────────────────────────────────────────
+
+    /**
+     * Lädt den Test-Datensatz und prüft Zugriffsrecht (Superadmin vs. Admin via child_admins).
+     * Gibt die Zeile mit child_id zurück, oder null wenn nicht berechtigt.
+     */
+    private static function fetchTestForAdmin(int $testId, int $adminId, bool $isSuperadmin): ?array
+    {
+        if ($isSuperadmin) {
+            $stmt = db()->prepare("
+                SELECT t.*, u.id AS child_id
+                FROM tests t JOIN users u ON t.user_id = u.id
+                WHERE t.id = ? AND t.status = 'completed'
+            ");
+            $stmt->execute([$testId]);
+        } else {
+            $stmt = db()->prepare("
+                SELECT t.*, u.id AS child_id
+                FROM tests t
+                JOIN users u ON t.user_id = u.id
+                JOIN child_admins ca ON u.id = ca.child_id
+                WHERE t.id = ? AND ca.admin_id = ? AND t.status = 'completed'
+            ");
+            $stmt->execute([$testId, $adminId]);
+        }
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    /**
+     * Erstellt einen AIService für das Kind (versucht Primary-Admin, Fallback: aufrufender Admin).
+     */
+    private static function makeAIService(int $childId, int $callerAdminId): AIService
+    {
+        try {
+            return new AIService($childId);
+        } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'Primary-Admin') || str_contains($e->getMessage(), 'api_key')) {
+                return new AIService($callerAdminId);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Lädt Testmetadaten, Kindprofil und beantwortete Items.
+     * @return array{0: array, 1: array, 2: array}  [$testMeta, $userProfile, $items]
+     */
+    private static function loadTestContext(int $testId, int $childId): array
+    {
+        $childStmt = db()->prepare(
+            "SELECT id, display_name, grade_level, school_type, theme FROM users WHERE id=?"
+        );
+        $childStmt->execute([$childId]);
+        $child = $childStmt->fetch();
+        if (!$child) throw new \RuntimeException("Kind (id={$childId}) nicht gefunden.");
+
+        $childSettings = EncryptionService::make()->loadUserSettings($childId);
+
+        $userProfile = [
+            'grade_level'   => (int)($child['grade_level'] ?? 4),
+            'school_type'   => $child['school_type']   ?? 'Grundschule',
+            'federal_state' => $childSettings['federal_state'] ?? 'Bayern',
+            'theme'         => $child['theme']          ?? 'minecraft',
+            'display_name'  => $child['display_name']   ?? 'Kind',
+        ];
+
+        $testStmt = db()->prepare("SELECT type FROM tests WHERE id=?");
+        $testStmt->execute([$testId]);
+        $testRow = $testStmt->fetch();
+
+        $testMeta = [
+            'type'      => $testRow['type'] ?? 'initial',
+            'user_name' => $child['display_name'],
+        ];
+
+        $items = self::loadTestItems($testId);
+
+        return [$testMeta, $userProfile, $items];
+    }
 
     /**
      * Lädt alle beantworteten Test-Items mit korrekten Antworten aus der words-Tabelle.

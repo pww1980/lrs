@@ -34,7 +34,7 @@ class ReportController
         $child = $childStmt->fetch();
 
         // Superadmin darf alle Kinder sehen
-        if (!$child && $_SESSION['role'] === 'superadmin') {
+        if (!$child && ($_SESSION['user_role'] ?? '') === 'superadmin') {
             $childStmt2 = db()->prepare(
                 "SELECT id, display_name, grade_level, school_type, theme, created_at
                  FROM users WHERE id=? AND role='child'"

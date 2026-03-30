@@ -1,0 +1,133 @@
+{
+  "language": "de",
+  "federal_state": "Bayern",
+  "school_type": "Gymnasium",
+  "grades": "5/6",
+  "grade_min": 5,
+  "grade_max": 6,
+  "source": "LehrplanPLUS Bayern Gymnasium 2017",
+  "url": "https://www.lehrplanplus.bayern.de/fachlehrplan/gymnasium/5/deutsch",
+  "issued": "2017-09",
+  "categories": {
+    "A1": {
+      "label": "Auslautverhärtung",
+      "block": "A",
+      "curriculum_text": "Die Schülerinnen und Schüler wenden die Strategie der Wortverlängerung zur Ableitung von Auslautverhärtungen selbstständig und sicher auf den erweiterten Wortschatz der Jahrgangsstufen 5/6 am Gymnasium an. Sie übertragen diese Strategie auf wenig geläufige Wörter, zusammengesetzte Wörter und Ableitungen (z. B. Grundsatz – Grundsätze, Auftrag – Aufträge, Widerspruch – Widersprüche). Sie erklären die Schreibung und nutzen das morphologische Prinzip bewusst.",
+      "curriculum_principle": "morphologisches Prinzip",
+      "examples_official": ["Grundsatz", "Auftrag", "Widerspruch", "Rückhalt", "Zeitvertreib", "Ausblick", "Vorbehalt", "Inbegriff"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "A2": {
+      "label": "Vokallänge (kurz/lang)",
+      "block": "A",
+      "curriculum_text": "Die Schülerinnen und Schüler nutzen das silbische Prinzip routiniert zur Bestimmung der Vokalquantität in mehrsilbigen und abgeleiteten Wörtern. Sie wenden die Silbentrennung als Kontrollstrategie an und erkennen den Einfluss von Nebensilben auf die Quantität des Stammvokals. Sie schreiben Wörter des erweiterten schulischen Wortschatzes mit kurzem und langem Vokal sicher richtig.",
+      "curriculum_principle": "silbisches Prinzip",
+      "examples_official": ["Methode", "System", "Motiv", "Niveau", "Fibel", "Modul", "Planet", "Regent"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "A3": {
+      "label": "Konsonantenhäufungen",
+      "block": "A",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Wörter mit mehrfachen Konsonantenhäufungen im schulischen und fachsprachlichen Wortschatz sicher richtig. Sie nutzen Morphemanalyse und Silbengliederung als ergänzende Strategien. Sie beherrschen auch Konsonantenhäufungen in Fremdwörtern, die im Unterricht der Jahrgangsstufen 5/6 relevant sind.",
+      "curriculum_principle": "phonologisches Prinzip / Morphemanalyse",
+      "examples_official": ["Ausdrucksweise", "Sachverhalt", "Beschriftung", "Darstellung", "Überprüfung", "Fortschritt", "Wachstum", "Kunstwerk"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "B1": {
+      "label": "Doppelkonsonanten",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Doppelkonsonanten im erweiterten Wortschatz der Jahrgangsstufen 5/6 sicher richtig und begründen ihre Schreibung mit dem silbischen Prinzip. Sie schreiben Wörter mit Doppelkonsonant in Komposita und Ableitungen korrekt (z. B. Klassensprecher, Programm, Grammatik) und unterscheiden diese von einfachen Konsonantenschreibungen. Sie korrigieren einschlägige Schreibfehler in eigenen Texten.",
+      "curriculum_principle": "silbisches Prinzip / morphologisches Prinzip",
+      "examples_official": ["Grammatik", "Programm", "Klassensprecher", "Kommentar", "Attraktion", "Mitteilung", "Erkenntnis", "Kenntnisse"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "B2": {
+      "label": "ck und tz",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben ck und tz nach kurzem betonten Vokal im erweiterten Wortschatz der Jahrgangsstufen 5/6 am Gymnasium sicher richtig. Sie wenden die Regel auf Ableitungen, Komposita und Wörter des Fachunterrichts an. Sie kennen Wörter, bei denen trotz kurzem Vokal kein ck oder tz steht (z. B. Fremdwörter), und sichern diese durch das Wörterbuch.",
+      "curriculum_principle": "silbisches Prinzip / Regelwissen",
+      "examples_official": ["Abschnitt", "Rücksicht", "Glückwunsch", "Ansatz", "Aufsatz", "Rücksack", "Strecke", "Lückenbüßer"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "B3": {
+      "label": "ie / ih / i (langer i-Laut)",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben den langen i-Laut in allen Schreibweisen sicher richtig. Sie beherrschen die häufige Schreibung ie (Biologie, Kopie) sowie ih in Personalformen (ihnen, ihrem, ihres) und kennen die Schreibung i ohne Dehnungszeichen in häufigen Fremdwörtern (Physik, Musik, Krise). Sie nutzen Wörterbücher zur Absicherung bei selteneren Wörtern.",
+      "curriculum_principle": "Regelwissen / orthografisches Prinzip",
+      "examples_official": ["Biologie", "Chemie", "Philosophie", "Energie", "Strategie", "ihrem", "ihnen", "Krise"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "B4": {
+      "label": "Dehnungs-h",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Wörter mit Dehnungs-h im erweiterten schulischen Wortschatz der Jahrgangsstufen 5/6 sicher richtig. Sie festigen den Sichtwortschatz für Wörter mit Dehnungs-h und erweitern ihn durch Wörter aus dem Fachunterricht (z. B. Maßnahme, Vorhaben, Rohstoff). Sie kontrollieren die Schreibung durch Nachschlagen und durch Anwenden bekannter Wortfamilien.",
+      "curriculum_principle": "orthografisches Prinzip / Sichtwortschatz",
+      "examples_official": ["Vorhaben", "Maßnahme", "Rohstoff", "Wahrhaftigkeit", "Gelehrtheit", "Gewohnheit", "Erholung", "Fremdheit"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "B5": {
+      "label": "sp und st (Anfangsgruppen)",
+      "block": "B",
+      "curriculum_text": "Die Schülerinnen und Schüler beherrschen die Schreibung von sp und st am Silbenanfang im erweiterten schulischen Wortschatz sicher. Sie wenden die Regel auf zusammengesetzte Wörter und Ableitungen an und übertragen sie auf wenig geläufige Wörter. Sie schreiben einschlägige Wörter des Fach- und Schulwortschatzes (z. B. Verstand, Aussicht, Aussprache) routiniert richtig.",
+      "curriculum_principle": "phonologisches Prinzip / Regelwissen",
+      "examples_official": ["Verstand", "Aussprache", "Vorstellung", "Bestandteil", "Aussprache", "Entspannung", "Bestimmung", "Gespräch"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "C1": {
+      "label": "ä vs. e (Umlautableitung)",
+      "block": "C",
+      "curriculum_text": "Die Schülerinnen und Schüler wenden das morphologische Prinzip zur Ableitung der ä-Schreibung sicher und selbstständig auf den schulischen und fachsprachlichen Wortschatz der Jahrgangsstufen 5/6 an. Sie leiten auch komplexere Formen durch Wortfamilienbildung ab (z. B. Gegenstände → Gegenstand, Zusammenfassungen → zusammenfassen) und unterscheiden diese von Wörtern mit e ohne Verwandte mit a.",
+      "curriculum_principle": "morphologisches Prinzip",
+      "examples_official": ["Gegenstände", "Zusammenhänge", "Beiträge", "Vorgänge", "Rückstände", "Grundsätze", "Vorhaben", "Abläufe"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "C2": {
+      "label": "äu vs. eu (Umlautableitung)",
+      "block": "C",
+      "curriculum_text": "Die Schülerinnen und Schüler unterscheiden äu und eu durch bewusste Anwendung des morphologischen Prinzips. Sie analysieren Wörter systematisch auf Stammwörter mit au (z. B. Geräusch → rauschen, Häufigkeit → Haufen) und leiten daraus die äu-Schreibung ab. Sie kennen häufige Wörter mit eu ohne Stammwort mit au und sichern unsichere Schreibungen durch Wörterbücher.",
+      "curriculum_principle": "morphologisches Prinzip",
+      "examples_official": ["Geräusch", "Häufigkeit", "Gebäude", "Läufer", "Verteilung", "Beurteilung", "Erneuerung", "Erleuchtung"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "C3": {
+      "label": "dass / das (Konjunktion vs. Artikel/Pronomen)",
+      "block": "C",
+      "curriculum_text": "Die Schülerinnen und Schüler unterscheiden die Konjunktion dass zuverlässig vom Artikel/Demonstrativ- und Relativpronomen das. Sie wenden grammatische Proben (Ersatz durch dieses, jenes; Umstellprobe) selbstständig an und übertragen die Unterscheidung auf komplexere Satzkonstruktionen (z. B. Relativsätze, indirekte Rede). Sie schreiben dass und das in eigenen Texten und Aufsätzen konsequent richtig.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Er betont, dass das Argument überzeugend ist.", "Das Buch, das sie liest, ist ein Roman.", "Sie weiß, dass das Ergebnis korrekt ist.", "Man erkennt, dass das System komplex ist."],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "D1": {
+      "label": "Großschreibung: konkrete Nomen",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben konkrete Nomen, auch Fachbegriffe und fremdsprachliche Entlehnungen, sicher groß. Sie erkennen Nomen auch ohne Artikel sicher (z. B. in Aufzählungen, nach Präpositionen). Sie übertragen die Großschreibungsregel routiniert auf den fachsprachlichen Wortschatz des Gymnasium-Unterrichts und kontrollieren eigene Texte systematisch.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Argument", "Hypothese", "Experiment", "Diagramm", "Abschnitt", "Verfasser", "Überblick", "Abbildung"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "D2": {
+      "label": "Großschreibung: abstrakte Nomen",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben abstrakte Nomen, insbesondere Ableitungen auf -heit, -keit, -schaft, -ung, -tum, sicher groß. Sie erkennen abstrakte Nomen auch in komplexen Textzusammenhängen zuverlässig. Sie achten auf die Großschreibung abstrakter Nomen in ihren eigenen Aufsätzen und Fachtexten.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Verantwortung", "Gerechtigkeit", "Selbstständigkeit", "Überzeugung", "Widerspruch", "Erkenntnis", "Bewusstsein", "Vielfalt"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "D3": {
+      "label": "Großschreibung: Nominalisierungen",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben Nominalisierungen in verschiedenen syntaktischen Positionen sicher groß. Sie erkennen substantivierte Infinitive (das Lesen, das Überarbeiten), Adjektive (das Wesentliche, das Bekannte) und Partizipien (das Gesprochene, das Geschriebene) und schreiben diese korrekt. Sie wenden dies auch in Texten ohne direkten Artikel (beim Nachdenken, trotz Zögerns) an.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["das Überarbeiten", "das Wesentliche", "das Gesprochene", "das Geschriebene", "beim Nachdenken", "das Bekannte", "trotz Zögerns", "das Entscheidende"],
+      "grade_focus": "Klasse 5 und 6"
+    },
+    "D4": {
+      "label": "Großschreibung: Satzanfang",
+      "block": "D",
+      "curriculum_text": "Die Schülerinnen und Schüler schreiben das erste Wort jedes Satzes in allen Textsorten sicher groß, auch in komplexen Satzgefügen und bei Zitaten. Sie beachten die Großschreibung nach Doppelpunkten bei wörtlicher Rede und bei vollständigen Sätzen. Sie überprüfen eigene Texte und Aufsätze systematisch auf diese Grundregel.",
+      "curriculum_principle": "grammatikalisches Prinzip",
+      "examples_official": ["Obwohl die Aufgabe schwierig war, löste er sie.", "Sie fragte: \"Wie soll das gehen?\"", "Daraus folgt: Das Ergebnis ist eindeutig.", "Somit lässt sich schlussfolgern, dass..."],
+      "grade_focus": "Klasse 5 und 6"
+    }
+  }
+}

@@ -86,10 +86,17 @@ class AnalysisController
             ]);
         } catch (\Throwable $e) {
             error_log('AnalysisController::runForChild — ' . $e->getMessage());
-            http_response_code(500);
+            $msg = $e->getMessage();
+
+            // Kein API-Key konfiguriert → verständliche Meldung, kein fataler Fehler
+            $noKey = str_contains($msg, 'API-Key') || str_contains($msg, 'api_key')
+                  || str_contains($msg, '401') || str_contains($msg, 'provider');
             echo json_encode([
-                'error'   => true,
-                'message' => 'Auswertung fehlgeschlagen: ' . $e->getMessage(),
+                'error'      => true,
+                'no_ai_key'  => $noKey,
+                'message'    => $noKey
+                    ? 'Kein KI-Key konfiguriert. Papa kann die Auswertung manuell im Dashboard starten.'
+                    : 'Auswertung fehlgeschlagen. Papa kann sie manuell im Dashboard starten.',
             ]);
         }
         exit;
@@ -113,18 +120,29 @@ class AnalysisController
             exit;
         }
 
-        $adminId = (int)$_SESSION['user_id'];
-        $testId  = (int)($data['test_id'] ?? 0);
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $testId       = (int)($data['test_id'] ?? 0);
 
-        // Test validieren — muss einem Kind gehören, das dieser Admin betreut
-        $stmt = db()->prepare("
-            SELECT t.*, u.id AS child_id
-            FROM tests t
-            JOIN users u ON t.user_id = u.id
-            JOIN child_admins ca ON u.id = ca.child_id
-            WHERE t.id = ? AND ca.admin_id = ? AND t.status = 'completed'
-        ");
-        $stmt->execute([$testId, $adminId]);
+        // Test validieren — Superadmin sieht alle Tests, Admin nur eigene Kinder
+        if ($isSuperadmin) {
+            $stmt = db()->prepare("
+                SELECT t.*, u.id AS child_id
+                FROM tests t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.id = ? AND t.status = 'completed'
+            ");
+            $stmt->execute([$testId]);
+        } else {
+            $stmt = db()->prepare("
+                SELECT t.*, u.id AS child_id
+                FROM tests t
+                JOIN users u ON t.user_id = u.id
+                JOIN child_admins ca ON u.id = ca.child_id
+                WHERE t.id = ? AND ca.admin_id = ? AND t.status = 'completed'
+            ");
+            $stmt->execute([$testId, $adminId]);
+        }
         $row = $stmt->fetch();
 
         if (!$row) {
@@ -143,7 +161,7 @@ class AnalysisController
         }
 
         try {
-            $result = self::runAnalysis($testId, (int)$row['child_id']);
+            $result = self::runAnalysis($testId, (int)$row['child_id'], $adminId);
             echo json_encode(['success' => true, 'plan_id' => $result['plan_id']]);
         } catch (\Throwable $e) {
             error_log('AnalysisController::runForAdmin — ' . $e->getMessage());
@@ -166,7 +184,7 @@ class AnalysisController
      * @return array{plan_id: int}
      * @throws \RuntimeException bei KI-Fehlern
      */
-    public static function runAnalysis(int $testId, int $userId): array
+    public static function runAnalysis(int $testId, int $userId, ?int $callerAdminId = null): array
     {
         $db = db();
 
@@ -209,7 +227,16 @@ class AnalysisController
         }
 
         // ── KI: Test auswerten ────────────────────────────────────────────
-        $ai          = new AIService($userId);
+        // Zuerst Kind-ID versuchen (sucht Primary Admin). Fallback: aufrufender Admin.
+        try {
+            $ai = new AIService($userId);
+        } catch (\RuntimeException $e) {
+            if ($callerAdminId !== null && str_contains($e->getMessage(), 'Primary-Admin')) {
+                $ai = new AIService($callerAdminId);
+            } else {
+                throw $e;
+            }
+        }
         $analysisResult = $ai->analyzeTest($testMeta, $items, $userProfile, $testId);
 
         // ── test_results speichern ────────────────────────────────────────

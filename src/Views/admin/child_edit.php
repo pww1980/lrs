@@ -109,6 +109,11 @@
                    <?= $currentSpeed === 'slow' ? 'checked' : '' ?>>
             <label for="speed_slow">🐢 Langsam</label>
           </div>
+          <div class="radio-option">
+            <input type="radio" name="tts_speed" id="speed_very_slow" value="very_slow"
+                   <?= $currentSpeed === 'very_slow' ? 'checked' : '' ?>>
+            <label for="speed_very_slow">🦥 Sehr langsam</label>
+          </div>
         </div>
         <p style="font-size:.78rem;color:var(--color-muted);margin:.4rem 0 0">
           Bestimmt die Standard-Abspielgeschwindigkeit beim Diktat.

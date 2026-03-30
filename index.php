@@ -289,6 +289,19 @@ match (true) {
             exit;
         })(),
 
+    // Wörter-Verwaltung
+    $uri === '/admin/words' && $method === 'GET'
+        => \App\Controllers\WordController::list(),
+
+    $uri === '/admin/words/toggle' && $method === 'POST'
+        => \App\Controllers\WordController::toggle(),
+
+    $uri === '/admin/words/delete' && $method === 'POST'
+        => \App\Controllers\WordController::delete(),
+
+    $uri === '/admin/words/add' && $method === 'POST'
+        => \App\Controllers\WordController::add(),
+
     // Lehrerin-Bericht (PDF-fähige HTML-Seite)
     preg_match('#^/admin/report/(\d+)$#', $uri, $m)
         => \App\Controllers\ReportController::show((int)$m[1]),

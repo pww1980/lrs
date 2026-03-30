@@ -29,14 +29,15 @@ class TTSService
 
     // ── Geschwindigkeit ───────────────────────────────────────────────
     private const SPEED_RATES = [
-        'normal' => 1.0,
-        'slow'   => 0.6,
+        'normal'    => 1.0,
+        'slow'      => 0.65,
+        'very_slow' => 0.45,
     ];
 
     private string  $provider;    // 'openai_tts' | 'google_tts' | 'browser'
     private string  $apiKey;
     private string  $voice;       // Stimmen-ID des Anbieters
-    private string  $speedSetting; // 'normal' | 'slow'
+    private string  $speedSetting; // 'normal' | 'slow' | 'very_slow'
 
     // ── Konstruktor ───────────────────────────────────────────────────
 
@@ -160,11 +161,12 @@ class TTSService
     public function getBrowserConfig(): array
     {
         return [
-            'provider'    => 'browser',
-            'lang'        => 'de-DE',
-            'rate_normal' => self::SPEED_RATES['normal'],
-            'rate_slow'   => self::SPEED_RATES['slow'],
-            'voice_hint'  => $this->voice,   // Bevorzugte Stimme (Browser wählt passende)
+            'provider'       => 'browser',
+            'lang'           => 'de-DE',
+            'rate_normal'    => self::SPEED_RATES['normal'],
+            'rate_slow'      => self::SPEED_RATES['slow'],
+            'rate_very_slow' => self::SPEED_RATES['very_slow'],
+            'voice_hint'     => $this->voice,
         ];
     }
 

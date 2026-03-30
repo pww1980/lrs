@@ -440,7 +440,7 @@ class DashboardController
         $schoolType  = trim($_POST['school_type']   ?? 'Grundschule');
         $theme       = trim($_POST['theme']         ?? 'minecraft');
         $active      = isset($_POST['active']) ? 1 : 0;
-        $ttsSpeed    = in_array($_POST['tts_speed'] ?? '', ['normal','slow']) ? $_POST['tts_speed'] : 'normal';
+        $ttsSpeed    = in_array($_POST['tts_speed'] ?? '', ['normal','slow','very_slow']) ? $_POST['tts_speed'] : 'normal';
 
         if ($displayName === '') {
             $_SESSION['child_edit_error'] = 'Name darf nicht leer sein.';

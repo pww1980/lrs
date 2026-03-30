@@ -22,6 +22,7 @@
   const feedbackEmoji    = document.getElementById('feedback-emoji');
   const feedbackMain     = document.getElementById('feedback-main');
   const feedbackAnswer   = document.getElementById('feedback-answer');
+  const feedbackRule     = document.getElementById('feedback-rule');
   const feedbackCountdown = document.getElementById('feedback-countdown');
   const sectionTransition = document.getElementById('section-transition');
   const trBiomeIcon      = document.getElementById('tr-biome-icon');
@@ -250,10 +251,17 @@
       feedbackAnswer.textContent = '';
     }
 
+    // Regel-Erklärung bei falscher Antwort
+    if (data.rule_hint) {
+      feedbackRule.textContent = data.rule_hint;
+    } else {
+      feedbackRule.textContent = '';
+    }
+
     feedbackOverlay.classList.add('visible');
 
-    // Countdown 2 → 1 → weiter
-    let secs = 2;
+    // Bei Fehler 4s, sonst 2s
+    let secs = data.correct ? 2 : 4;
     feedbackCountdown.textContent = secs;
     clearTimeout(feedbackTimer);
     clearInterval(countdownTimer);

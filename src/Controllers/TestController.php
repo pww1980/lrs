@@ -336,6 +336,7 @@ class TestController
             'feedback_text'  => $isCorrect
                 ? '✅ Richtig! +XP'
                 : ('❌ Das Wort lautet: <strong>' . htmlspecialchars($correct) . '</strong>'),
+            'rule_hint'      => $isCorrect ? null : self::getRuleHint($item['primary_category'] ?? '', $block),
         ]);
         exit;
     }
@@ -695,6 +696,44 @@ class TestController
             'error_rate'      => (int)round($errorRate * 100),
             'avg_replay'      => round($avgReplay, 1),
         ];
+    }
+
+    /**
+     * Gibt eine kurze Regel-Erklärung für eine Fehlerkategorie zurück.
+     * Ohne KI — rein statisch, sofort verfügbar.
+     */
+    private static function getRuleHint(string $category, string $block): string
+    {
+        $hints = [
+            // Block A
+            'A1' => '💡 Tipp: Verlängere das Wort! "Hund" → "Hunde" → das d am Ende bleibt sichtbar.',
+            'A2' => '💡 Tipp: Offene Silbe = langer Vokal (O-fen), geschlossene = kurzer Vokal (of-fen).',
+            'A3' => '💡 Tipp: Sprich das Wort langsam in Silben — schreibe jeden Laut, den du hörst.',
+            // Block B
+            'B1' => '💡 Regel: Nach kurzem, betontem Vokal verdoppelt man den Konsonanten: Mut-ter, Was-ser.',
+            'B2' => '💡 Regel: Nach kurzem Vokal schreibt man "ck" (Ba-cken) und "tz" (Kat-ze).',
+            'B3' => '💡 Regel: Den langen i-Laut schreibt man meist "ie" (Tier, Brief). Ausnahmen: ihm, ihn, ihr.',
+            'B4' => '💡 Regel: Das Dehnungs-h steht nach langem Vokal: fah-ren, Stuhl, Mehl — stumm, aber wichtig!',
+            'B5' => '💡 Regel: Am Wortanfang klingt "st" → "schd" und "sp" → "schp", aber man schreibt st und sp.',
+            // Block C
+            'C1' => '💡 Tipp: Leite das Wort ab! "Hände" kommt von "Hand" → ä statt e.',
+            'C2' => '💡 Tipp: "äu" kommt von "au": Haus→Häuser, Baum→Bäume. Kein "au"-Stammwort? → "eu".',
+            'C3' => '💡 Regel: "dass" ist eine Konjunktion (man kann sie durch "weil" ersetzen). "das" ist ein Artikel oder Pronomen.',
+            // Block D
+            'D1' => '💡 Regel: Konkrete Dinge, die man anfassen kann, schreibt man groß: der Hund, das Fahrrad.',
+            'D2' => '💡 Regel: Auch abstrakte Dinge (Gefühle, Ideen) sind Nomen und werden großgeschrieben: die Angst.',
+            'D3' => '💡 Regel: Verben werden zu Nomen, wenn "das" davor steht: das Laufen, beim Essen.',
+            'D4' => '💡 Regel: Das erste Wort eines Satzes schreibt man immer groß.',
+        ];
+
+        return $hints[$category]
+            ?? match ($block) {
+                'A' => '💡 Tipp: Sprich das Wort laut und verlängere es — so erkennst du die richtige Schreibung.',
+                'B' => '💡 Tipp: Denke an die Rechtschreib-Regel für dieses Wort.',
+                'C' => '💡 Tipp: Suche das Grundwort und leite die Schreibung davon ab.',
+                'D' => '💡 Tipp: Nomen und Satzanfänge werden großgeschrieben.',
+                default => '',
+            };
     }
 
     /**

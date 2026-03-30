@@ -827,7 +827,7 @@ const TEST_DATA = {
     title.textContent = 'Auswertung läuft…';
     sub.textContent   = 'Die KI analysiert deine Antworten. Bitte warten…';
 
-    fetch('/learn/test/analyze', {
+    fetch('<?= url('/learn/test/analyze') ?>', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf_token: csrf, test_id: testId }),

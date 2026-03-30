@@ -313,6 +313,8 @@ $formatLabel = [
             <td>
               <a href="<?= url('/admin/child/' . (int)$child['id'] . '/edit') ?>"
                  class="btn btn-sm btn-secondary" title="Profil bearbeiten">✏️</a>
+              <a href="<?= url('/admin/words?child_id=' . (int)$child['id']) ?>"
+                 class="btn btn-sm btn-secondary" title="Wortliste" style="margin-left:.25rem">📝</a>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -803,6 +805,9 @@ $formatLabel = [
 
 <script>
 const CSRF = <?= json_encode($csrfToken) ?>;
+const URL_ANALYSIS_RUN   = <?= json_encode(url('/admin/analysis/run')) ?>;
+const URL_QUEST_TOGGLE   = <?= json_encode(url('/admin/plan/quest-toggle')) ?>;
+const URL_PLAN_APPROVE   = <?= json_encode(url('/admin/plan/approve')) ?>;
 
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -817,7 +822,7 @@ function runAnalysis(testId, btn) {
   btn.disabled    = true;
   btn.textContent = '⏳ Läuft…';
 
-  fetch('/admin/analysis/run', {
+  fetch(URL_ANALYSIS_RUN, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ csrf_token: CSRF, test_id: testId }),
@@ -847,7 +852,7 @@ function runAnalysis(testId, btn) {
 function toggleQuest(questId, toggleEl) {
   const row = document.getElementById('quest-row-' + questId);
 
-  fetch('/admin/plan/quest-toggle', {
+  fetch(URL_QUEST_TOGGLE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ csrf_token: CSRF, quest_id: questId }),
@@ -875,7 +880,7 @@ function approvePlan(planId, btn) {
   btn.disabled    = true;
   btn.textContent = '⏳ Wird aktiviert…';
 
-  fetch('/admin/plan/approve', {
+  fetch(URL_PLAN_APPROVE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ csrf_token: CSRF, plan_id: planId }),

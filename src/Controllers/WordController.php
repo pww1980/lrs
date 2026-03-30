@@ -22,14 +22,45 @@ class WordController
     {
         Auth::requireRole('admin', 'superadmin');
 
-        $db = db();
+        $db      = db();
+        $adminId = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+
+        // Optionaler Kind-Filter
+        $childId   = (int)($_GET['child_id'] ?? 0);
+        $childInfo = null;
+        if ($childId > 0) {
+            $stmt = $isSuperadmin
+                ? $db->prepare("SELECT id, display_name, grade_level FROM users WHERE id=? AND role='child'")
+                : $db->prepare("SELECT u.id, u.display_name, u.grade_level FROM users u
+                                JOIN child_admins ca ON u.id=ca.child_id
+                                WHERE u.id=? AND ca.admin_id={$adminId} AND u.role='child'");
+            $stmt->execute([$childId]);
+            $childInfo = $stmt->fetch() ?: null;
+        }
+
+        // Kinder-Liste für Dropdown (eigene Kinder des Admins)
+        if ($isSuperadmin) {
+            $childrenStmt = $db->query("SELECT id, display_name, grade_level FROM users WHERE role='child' AND active=1 ORDER BY display_name");
+        } else {
+            $childrenStmt = $db->prepare("SELECT u.id, u.display_name, u.grade_level FROM users u
+                JOIN child_admins ca ON u.id=ca.child_id
+                WHERE ca.admin_id=? AND u.role='child' AND u.active=1 ORDER BY u.display_name");
+            $childrenStmt->execute([$adminId]);
+        }
+        $children = $childrenStmt->fetchAll();
 
         // Filter aus GET-Parametern
         $filterCat    = $_GET['cat']    ?? '';
         $filterGrade  = (int)($_GET['grade'] ?? 0);
         $filterSource = $_GET['source'] ?? '';
-        $filterActive = $_GET['active'] ?? 'all';
+        $filterActive = $_GET['active'] ?? 'active';
         $search       = trim($_GET['q'] ?? '');
+
+        // Bei Kind-Filter: Klasse vorbelegen
+        if ($childInfo && $filterGrade === 0) {
+            $filterGrade = (int)($childInfo['grade_level'] ?? 0);
+        }
 
         // Query aufbauen
         $where  = ['1=1'];
@@ -59,32 +90,24 @@ class WordController
 
         $whereStr = implode(' AND ', $where);
 
-        $words = $db->prepare(
-            "SELECT id, word, primary_category, grade_level, difficulty, source, active, created_at
+        $stmt = $db->prepare(
+            "SELECT id, word, primary_category, grade_level, difficulty, source, active
              FROM words WHERE {$whereStr} ORDER BY primary_category, grade_level, word LIMIT 500"
         );
-        $words->execute($params);
-        $words = $words->fetchAll();
+        $stmt->execute($params);
+        $words = $stmt->fetchAll();
 
-        // Zähler pro Kategorie (ungefiltert, nur aktive)
+        // Zähler pro Kategorie (nur aktive, ungefiltert)
         $catCounts = [];
-        $rows = $db->query(
-            "SELECT primary_category, COUNT(*) AS cnt FROM words WHERE active=1 GROUP BY primary_category"
-        )->fetchAll();
-        foreach ($rows as $r) {
+        foreach ($db->query("SELECT primary_category, COUNT(*) AS cnt FROM words WHERE active=1 GROUP BY primary_category")->fetchAll() as $r) {
             $catCounts[$r['primary_category']] = (int)$r['cnt'];
         }
 
         $totalActive   = (int)$db->query("SELECT COUNT(*) FROM words WHERE active=1")->fetchColumn();
         $totalInactive = (int)$db->query("SELECT COUNT(*) FROM words WHERE active=0")->fetchColumn();
+        $csrfToken     = Auth::csrfToken();
 
-        $csrfToken = Auth::csrfToken();
-
-        render('admin/words', compact(
-            'words', 'catCounts', 'totalActive', 'totalInactive',
-            'filterCat', 'filterGrade', 'filterSource', 'filterActive', 'search',
-            'csrfToken'
-        ));
+        require __DIR__ . '/../Views/admin/words.php';
     }
 
     public static function toggle(): void

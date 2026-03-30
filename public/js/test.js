@@ -259,6 +259,7 @@
     }
 
     feedbackOverlay.classList.add('visible');
+    feedbackOverlay._lastData = data;  // für Overlay-Klick gespeichert
 
     // Bei Fehler 4s, sonst 2s
     let secs = data.correct ? 2 : 4;
@@ -272,15 +273,17 @@
       if (secs <= 0) clearInterval(countdownTimer);
     }, 1000);
 
-    feedbackTimer = setTimeout(() => {
-      feedbackOverlay.classList.remove('visible');
-      if (data.section_done) {
-        completeSectionRequest();
-      } else if (data.next_item_id) {
-        currentItemId = data.next_item_id;
-        loadAndPlayTts(currentItemId, 'normal');
-      }
-    }, 2000);
+    feedbackTimer = setTimeout(() => advanceAfterFeedback(data), secs * 1000);
+  }
+
+  function advanceAfterFeedback(data) {
+    feedbackOverlay.classList.remove('visible');
+    if (data.section_done) {
+      completeSectionRequest();
+    } else if (data.next_item_id) {
+      currentItemId = data.next_item_id;
+      loadAndPlayTts(currentItemId, 'normal');
+    }
   }
 
   // ── Sektion abschließen ──────────────────────────────────────────────────
@@ -407,14 +410,7 @@
     if (state !== 'feedback') return;
     clearTimeout(feedbackTimer);
     clearInterval(countdownTimer);
-    feedbackOverlay.classList.remove('visible');
-
-    const data = feedbackOverlay._lastData;  // gespeichert in showFeedback
-    if (nextSectionData) {
-      showSectionTransition(nextSectionData);
-    } else {
-      // Wird erst gesetzt wenn section_done — hier kommt es nie hin
-    }
+    advanceAfterFeedback(feedbackOverlay._lastData || {});
   });
 
   // Sektion-Übergang: Weiter

@@ -227,6 +227,7 @@ $formatLabel = [
 <nav class="navbar">
   <span class="navbar-brand">⛏️ <?= htmlspecialchars(APP_NAME) ?></span>
   <span class="navbar-user">👤 <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?></span>
+  <a href="<?= url('/admin/words') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">📝 Wörter</a>
   <a href="<?= url('/logout') ?>" class="btn btn-sm">Abmelden</a>
 </nav>
 
@@ -584,14 +585,20 @@ $formatLabel = [
       var phases = ['words', 'sentences'];
       var phaseLabels = {words: 'Wörter', sentences: 'Sätze'};
       var phaseIdx = 0;
-      var phaseTotals = {};   // {words: N, sentences: M}
-      var phaseProcessed = {};
+      var phaseTotals = {};    // {words: N, sentences: M}
+      var phaseProcessed = {}; // zählt Items (nicht Audiodateien)
 
-      function totalItems() {
-        return Object.values(phaseTotals).reduce(function(a,b){return a+b;}, 0) || 1;
-      }
-      function totalProcessed() {
-        return Object.values(phaseProcessed).reduce(function(a,b){return a+b;}, 0);
+      // Jede Phase trägt gleich viel zum Gesamtfortschritt bei (0–50% / 50–100%)
+      function overallPct() {
+        var pct = 0;
+        for (var i = 0; i < phases.length; i++) {
+          var ph = phases[i];
+          var total = phaseTotals[ph] || 0;
+          if (total > 0) {
+            pct += Math.min(1, (phaseProcessed[ph] || 0) / total) / phases.length;
+          }
+        }
+        return Math.min(100, Math.round(pct * 100));
       }
 
       function warmBatch(type, offset) {
@@ -603,11 +610,12 @@ $formatLabel = [
               status.textContent = '✓ Browser-TTS benötigt keinen Cache.';
               btn.disabled = false; return;
             }
-            phaseTotals[type]    = (phaseTotals[type] || 0) || data.total;
-            phaseProcessed[type] = (phaseProcessed[type] || 0) + data.done + data.skipped;
-            var pct = Math.min(100, Math.round(totalProcessed() / totalItems() * 100));
+            // data.offset = nächste Position = verarbeitete Items bisher
+            phaseTotals[type]    = data.total;
+            phaseProcessed[type] = Math.min(data.offset, data.total);
+            var pct = overallPct();
             fill.style.width    = pct + '%';
-            status.textContent  = phaseLabels[type] + ': ' + data.offset + '/' + data.total
+            status.textContent  = phaseLabels[type] + ': ' + phaseProcessed[type] + '/' + data.total
                                 + ' — gesamt ' + pct + '%';
             if (!data.finished) {
               warmBatch(type, data.offset);

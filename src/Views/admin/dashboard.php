@@ -221,6 +221,80 @@ $formatLabel = [
       .children-table th:nth-child(3),
       .children-table td:nth-child(3) { display: none; }
     }
+
+    /* ── Motivation: Nachrichten & Ziele ── */
+    .motiv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.75rem;
+    }
+    @media (max-width: 700px) { .motiv-grid { grid-template-columns: 1fr; } }
+
+    .motiv-card {
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .motiv-card-head {
+      background: var(--color-primary-dk);
+      color: #fff;
+      padding: .6rem 1rem;
+      font-size: .88rem;
+      font-weight: 700;
+    }
+    .motiv-card-body { padding: 1rem; }
+
+    .msg-list { margin-bottom: .75rem; }
+    .msg-item {
+      display: flex; align-items: flex-start; gap: .5rem;
+      background: #fff8e1; border-radius: 8px; padding: .5rem .7rem;
+      margin-bottom: .4rem; font-size: .85rem;
+    }
+    .msg-item-emoji { font-size: 1.1rem; flex-shrink: 0; }
+    .msg-item-text  { flex: 1; color: #3e2723; }
+    .msg-item-meta  { font-size: .72rem; color: #a0897a; }
+    .msg-item-del   {
+      background: none; border: none; color: #ccc;
+      cursor: pointer; font-size: 1rem; padding: 0; flex-shrink: 0;
+    }
+    .msg-item-del:hover { color: #e53935; }
+    .msg-empty { color: #999; font-size: .83rem; margin-bottom: .75rem; }
+
+    .goal-current {
+      background: #f1f8e9; border-radius: 8px; padding: .75rem;
+      margin-bottom: .75rem; font-size: .88rem;
+    }
+    .goal-current-title { font-weight: 700; color: #33691e; margin-bottom: .4rem; }
+    .goal-progress-bar  {
+      height: 10px; background: #dcedc8; border-radius: 5px; overflow: hidden; margin-bottom: .3rem;
+    }
+    .goal-progress-fill {
+      height: 100%; background: #7cb342; border-radius: 5px; transition: width .4s;
+    }
+    .goal-progress-sub  { font-size: .75rem; color: #558b2f; }
+    .goal-reward-badge  {
+      display: inline-block; background: #e8f5e9; border-radius: 6px;
+      padding: .2rem .5rem; font-size: .78rem; color: #2e7d32; margin-top: .35rem;
+    }
+    .goal-cancel-btn { font-size: .75rem; color: #999; background: none; border: none; cursor: pointer; margin-top: .3rem; display: block; }
+    .goal-cancel-btn:hover { color: #e53935; }
+
+    .motiv-form label  { display: block; font-size: .78rem; color: #666; margin-bottom: .15rem; }
+    .motiv-form input,
+    .motiv-form select,
+    .motiv-form textarea { width: 100%; box-sizing: border-box; margin-bottom: .6rem; }
+    .motiv-form textarea { resize: vertical; min-height: 60px; }
+    .motiv-form .emoji-row {
+      display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .6rem;
+    }
+    .motiv-form .emoji-btn {
+      background: #f5f5f5; border: 2px solid transparent;
+      border-radius: 8px; font-size: 1.2rem; cursor: pointer; padding: .2rem .4rem;
+      transition: border-color .1s;
+    }
+    .motiv-form .emoji-btn.selected { border-color: var(--color-primary-dk); }
   </style>
 </head>
 <body>
@@ -903,6 +977,171 @@ $formatLabel = [
   </section>
   <?php endif; ?>
 
+  <!-- ══════════════════════════════════════════════════════════════════
+       MOTIVATION: NACHRICHTEN & FAMILIENZIELE
+  ════════════════════════════════════════════════════════════════════ -->
+  <?php if (!empty($children)): ?>
+  <section class="dash-section">
+    <div class="dash-section-title">💌 Motivation — Nachrichten & Familienziele</div>
+
+    <?php foreach ($children as $child):
+      $cid      = (int)$child['id'];
+      $messages = $child['messages']    ?? [];
+      $goal     = $child['active_goal'] ?? null;
+    ?>
+    <div style="margin-bottom:2rem">
+      <h3 style="font-size:.95rem;color:#444;margin:0 0 .75rem">
+        🧒 <?= htmlspecialchars($child['display_name']) ?>
+      </h3>
+
+      <div class="motiv-grid">
+
+        <!-- ── Nachrichten ── -->
+        <div class="motiv-card">
+          <div class="motiv-card-head">💌 Nachrichten an <?= htmlspecialchars($child['display_name']) ?></div>
+          <div class="motiv-card-body">
+
+            <?php if (!empty($messages)): ?>
+              <div class="msg-list">
+                <?php foreach ($messages as $msg): ?>
+                <div class="msg-item">
+                  <span class="msg-item-emoji"><?= htmlspecialchars($msg['emoji'] ?? '💌') ?></span>
+                  <div style="flex:1">
+                    <div class="msg-item-text"><?= htmlspecialchars($msg['message']) ?></div>
+                    <div class="msg-item-meta">
+                      <?= date('d.m. H:i', strtotime($msg['created_at'])) ?>
+                      <?= $msg['seen_at'] ? '· gesehen ✓' : '· noch nicht gesehen' ?>
+                    </div>
+                  </div>
+                  <form method="POST" action="<?= url('/admin/message/delete') ?>" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                    <input type="hidden" name="message_id" value="<?= (int)$msg['id'] ?>">
+                    <button type="submit" class="msg-item-del" title="Nachricht löschen">✕</button>
+                  </form>
+                </div>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <div class="msg-empty">Keine Nachrichten.</div>
+            <?php endif; ?>
+
+            <!-- Neue Nachricht senden -->
+            <form method="POST" action="<?= url('/admin/message/send') ?>" class="motiv-form">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+              <input type="hidden" name="child_id"   value="<?= $cid ?>">
+              <input type="hidden" name="emoji" id="emoji-val-<?= $cid ?>" value="💌">
+
+              <div class="emoji-row" id="emoji-row-<?= $cid ?>">
+                <?php foreach (['💌','⭐','🚀','🏆','💪','🔥','🎉','👏','❤️','🌟'] as $em): ?>
+                  <button type="button" class="emoji-btn <?= $em === '💌' ? 'selected' : '' ?>"
+                          onclick="selectEmoji(<?= $cid ?>, '<?= $em ?>', this)">
+                    <?= $em ?>
+                  </button>
+                <?php endforeach; ?>
+              </div>
+
+              <label>Nachricht</label>
+              <textarea name="message" placeholder="Toller Job heute! Ich bin stolz auf dich 🌟" rows="2" required></textarea>
+              <button type="submit" class="btn btn-sm btn-primary">Nachricht senden 💌</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ── Familienziel ── -->
+        <div class="motiv-card">
+          <div class="motiv-card-head">🎯 Familienziel für <?= htmlspecialchars($child['display_name']) ?></div>
+          <div class="motiv-card-body">
+
+            <?php if ($goal): ?>
+              <?php
+                $gp  = (int)($goal['progress'] ?? 0);
+                $gv  = (int)$goal['goal_value'];
+                $pct = $gv > 0 ? min(100, round($gp / $gv * 100)) : 0;
+                $gtl = match($goal['goal_type']) {
+                  'sessions' => 'Einheiten', 'quests' => 'Quests', default => 'Tage Streak'
+                };
+                $periodLabel = match($goal['period']) {
+                  'week' => 'diese Woche', 'month' => 'diesen Monat', default => 'gesamt'
+                };
+              ?>
+              <div class="goal-current">
+                <div class="goal-current-title">
+                  🎯 <?= htmlspecialchars($goal['title']) ?>
+                  <?php if ($goal['status'] === 'completed'): ?>
+                    <span style="color:#4caf50"> ✅ Erreicht!</span>
+                  <?php endif; ?>
+                </div>
+                <div style="font-size:.78rem;color:#558b2f;margin-bottom:.5rem">
+                  <?= $gtl ?> <?= htmlspecialchars($periodLabel) ?>
+                  · Ziel: <?= $gv ?>
+                </div>
+                <div class="goal-progress-bar">
+                  <div class="goal-progress-fill" style="width:<?= $pct ?>%"></div>
+                </div>
+                <div class="goal-progress-sub"><?= $gp ?> / <?= $gv ?> <?= $gtl ?> (<?= $pct ?>%)</div>
+                <?php if ($goal['reward_text']): ?>
+                  <span class="goal-reward-badge">🎁 <?= htmlspecialchars($goal['reward_text']) ?></span>
+                <?php endif; ?>
+                <form method="POST" action="<?= url('/admin/goal/delete') ?>" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                  <input type="hidden" name="goal_id" value="<?= (int)$goal['id'] ?>">
+                  <button type="submit" class="goal-cancel-btn"
+                          onclick="return confirm('Ziel wirklich löschen?')">
+                    Ziel löschen
+                  </button>
+                </form>
+              </div>
+            <?php else: ?>
+              <div class="msg-empty">Kein aktives Ziel.</div>
+            <?php endif; ?>
+
+            <!-- Neues Ziel setzen -->
+            <form method="POST" action="<?= url('/admin/goal/save') ?>" class="motiv-form"
+                  <?= $goal && $goal['status'] === 'active' ? 'style="opacity:.75"' : '' ?>>
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+              <input type="hidden" name="child_id"   value="<?= $cid ?>">
+
+              <label>Titel des Ziels</label>
+              <input type="text" name="title" placeholder="Diese Woche 5 Einheiten!" required
+                     maxlength="200">
+
+              <label>Zeitraum &amp; Typ</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.6rem">
+                <select name="period">
+                  <option value="week">Diese Woche</option>
+                  <option value="month">Diesen Monat</option>
+                  <option value="alltime">Gesamt</option>
+                </select>
+                <select name="goal_type">
+                  <option value="sessions">Einheiten</option>
+                  <option value="quests">Quests</option>
+                  <option value="streak">Tage Streak</option>
+                </select>
+              </div>
+
+              <label>Anzahl (Zielwert)</label>
+              <input type="number" name="goal_value" min="1" max="999" value="5" required>
+
+              <label>Belohnung (optional)</label>
+              <input type="text" name="reward_text" placeholder="Dann gehen wir Eis essen 🍦"
+                     maxlength="200">
+
+              <button type="submit" class="btn btn-sm btn-primary"
+                      <?= $goal && $goal['status'] === 'active'
+                          ? 'onclick="return confirm(\'Läuft bereits ein Ziel. Altes Ziel ersetzen?\')"'
+                          : '' ?>>
+                🎯 Ziel setzen
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div><!-- .motiv-grid -->
+    </div>
+    <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
+
   <!-- Keine Kinder + kein Ausstehend -->
   <?php if (empty($pendingAnalysis) && empty($withDraftPlan) && !empty($children)): ?>
   <div class="empty-state" style="margin-top:2rem">
@@ -1141,6 +1380,14 @@ function approvePlan(planId, btn) {
       btn.disabled    = false;
       btn.textContent = '✅ Plan bestätigen & aktivieren';
     });
+}
+
+// ── Emoji-Auswahl für Nachrichten ────────────────────────────────────
+function selectEmoji(childId, emoji, btn) {
+  document.getElementById('emoji-val-' + childId).value = emoji;
+  const row = document.getElementById('emoji-row-' + childId);
+  row.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
 }
 </script>
 </body>

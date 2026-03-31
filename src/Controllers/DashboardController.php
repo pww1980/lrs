@@ -540,10 +540,85 @@ class DashboardController
                 ];
             }
             $child['chart_data'] = $chartData;
+
+            // Eltern-Nachrichten (alle, neueste zuerst)
+            $msgStmt = db()->prepare("
+                SELECT id, message, emoji, created_at, seen_at
+                FROM parent_messages
+                WHERE child_id=?
+                ORDER BY created_at DESC
+            ");
+            $msgStmt->execute([$cid]);
+            $child['messages'] = $msgStmt->fetchAll();
+
+            // Aktives Familienziel
+            $goalStmt = db()->prepare("
+                SELECT * FROM family_goals
+                WHERE child_id=? AND status='active'
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $goalStmt->execute([$cid]);
+            $goal = $goalStmt->fetch() ?: null;
+
+            if ($goal) {
+                // Fortschritt berechnen
+                $goal['progress'] = self::computeGoalProgress($cid, $goal);
+                // Ziel erreicht?
+                if ($goal['progress'] >= $goal['goal_value']) {
+                    db()->prepare("
+                        UPDATE family_goals SET status='completed', completed_at=CURRENT_TIMESTAMP
+                        WHERE id=?
+                    ")->execute([$goal['id']]);
+                    $goal['status'] = 'completed';
+                }
+            }
+            $child['active_goal'] = $goal;
         }
         unset($child);
 
         return $children;
+    }
+
+    /** Öffentlicher Wrapper — wird auch von SessionController genutzt */
+    public static function computeGoalProgressPublic(int $childId, array $goal): int
+    {
+        return self::computeGoalProgress($childId, $goal);
+    }
+
+    private static function computeGoalProgress(int $childId, array $goal): int
+    {
+        $periodStart = $goal['period_start'];
+        switch ($goal['goal_type']) {
+            case 'sessions':
+                $stmt = db()->prepare("
+                    SELECT COUNT(*) FROM sessions
+                    WHERE user_id=? AND status='completed' AND date(started_at) >= ?
+                ");
+                $stmt->execute([$childId, $periodStart]);
+                return (int)$stmt->fetchColumn();
+
+            case 'quests':
+                $stmt = db()->prepare("
+                    SELECT COUNT(*) FROM quests q
+                    JOIN plan_biomes pb ON q.biome_id = pb.id
+                    JOIN learning_plans lp ON pb.plan_id = lp.id
+                    WHERE lp.user_id=? AND q.status='completed'
+                      AND date(q.completed_at) >= ?
+                ");
+                $stmt->execute([$childId, $periodStart]);
+                return (int)$stmt->fetchColumn();
+
+            case 'streak':
+                $stmt = db()->prepare("
+                    SELECT COUNT(DISTINCT date(started_at)) FROM sessions
+                    WHERE user_id=? AND status='completed' AND date(started_at) >= ?
+                ");
+                $stmt->execute([$childId, $periodStart]);
+                return (int)$stmt->fetchColumn();
+
+            default:
+                return 0;
+        }
     }
 
     /**
@@ -637,6 +712,141 @@ class DashboardController
             $stmt->execute([$childId, $adminId]);
         }
         return $stmt->fetch() ?: null;
+    }
+
+    // ── Eltern-Nachrichten ────────────────────────────────────────────────
+
+    /** POST /admin/message/send */
+    public static function sendMessage(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+        $adminId = (int)$_SESSION['user_id'];
+        $childId = (int)($_POST['child_id'] ?? 0);
+        $message = trim($_POST['message'] ?? '');
+        $emoji   = trim($_POST['emoji']   ?? '💌');
+
+        if (!$childId || $message === '') {
+            redirect('/admin/dashboard');
+        }
+
+        // Auth: Admin muss Kind kennen (außer Superadmin)
+        $child = self::loadChildForAdmin($adminId, $childId);
+        if (!$child) { redirect('/admin/dashboard'); }
+
+        // Nur erlaubte Emojis durchlassen (1-2 Zeichen)
+        if (mb_strlen($emoji) > 4) $emoji = '💌';
+
+        db()->prepare("
+            INSERT INTO parent_messages (child_id, admin_id, message, emoji)
+            VALUES (?, ?, ?, ?)
+        ")->execute([$childId, $adminId, $message, $emoji]);
+
+        redirect('/admin/dashboard');
+    }
+
+    /** POST /admin/message/delete */
+    public static function deleteMessage(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+        $adminId   = (int)$_SESSION['user_id'];
+        $messageId = (int)($_POST['message_id'] ?? 0);
+
+        // Nur eigene Nachrichten löschen
+        db()->prepare("
+            DELETE FROM parent_messages WHERE id=? AND admin_id=?
+        ")->execute([$messageId, $adminId]);
+
+        redirect('/admin/dashboard');
+    }
+
+    /** POST /learn/message/seen — AJAX, Kind markiert Nachrichten als gelesen */
+    public static function markMessageSeen(): void
+    {
+        Auth::requireRole('child');
+        $userId = (int)$_SESSION['user_id'];
+        $data   = json_decode(file_get_contents('php://input'), true) ?? [];
+        $token  = $data['csrf_token'] ?? '';
+
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF']);
+            exit;
+        }
+
+        db()->prepare("
+            UPDATE parent_messages
+            SET seen_at = CURRENT_TIMESTAMP
+            WHERE child_id=? AND seen_at IS NULL
+        ")->execute([$userId]);
+
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    // ── Familienziele ─────────────────────────────────────────────────────
+
+    /** POST /admin/goal/save */
+    public static function saveGoal(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+        $adminId    = (int)$_SESSION['user_id'];
+        $childId    = (int)($_POST['child_id']   ?? 0);
+        $title      = trim($_POST['title']       ?? '');
+        $goalType   = $_POST['goal_type']        ?? 'sessions';
+        $goalValue  = (int)($_POST['goal_value'] ?? 5);
+        $period     = $_POST['period']           ?? 'week';
+        $rewardText = trim($_POST['reward_text'] ?? '');
+
+        if (!$childId || $title === '' || $goalValue < 1) {
+            redirect('/admin/dashboard');
+        }
+
+        $child = self::loadChildForAdmin($adminId, $childId);
+        if (!$child) { redirect('/admin/dashboard'); }
+
+        // Validate enums
+        if (!in_array($goalType, ['sessions','quests','streak']))   $goalType  = 'sessions';
+        if (!in_array($period,   ['week','month','alltime']))        $period    = 'week';
+        $goalValue = min(max($goalValue, 1), 999);
+
+        // Laufendes Ziel desselben Kindes deaktivieren
+        db()->prepare("
+            UPDATE family_goals SET status='cancelled'
+            WHERE child_id=? AND status='active'
+        ")->execute([$childId]);
+
+        $periodStart = match($period) {
+            'week'    => date('Y-m-d', strtotime('monday this week')),
+            'month'   => date('Y-m-01'),
+            default   => date('Y-m-d'),
+        };
+
+        db()->prepare("
+            INSERT INTO family_goals
+              (child_id, admin_id, title, goal_type, goal_value, period, reward_text, period_start)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ")->execute([$childId, $adminId, $title, $goalType, $goalValue, $period,
+                     $rewardText ?: null, $periodStart]);
+
+        redirect('/admin/dashboard');
+    }
+
+    /** POST /admin/goal/delete */
+    public static function deleteGoal(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+        $adminId = (int)$_SESSION['user_id'];
+        $goalId  = (int)($_POST['goal_id'] ?? 0);
+
+        db()->prepare("
+            DELETE FROM family_goals WHERE id=? AND admin_id=?
+        ")->execute([$goalId, $adminId]);
+
+        redirect('/admin/dashboard');
     }
 
     /**

@@ -447,6 +447,23 @@ match (true) {
     $uri === '/learn/test' && $method === 'POST'
         => \App\Controllers\TestController::startTest(),
 
+    // ── Motivation: Nachrichten & Familienziele (Admin) ─────────────────
+    $uri === '/admin/message/send' && $method === 'POST'
+        => \App\Controllers\DashboardController::sendMessage(),
+
+    $uri === '/admin/message/delete' && $method === 'POST'
+        => \App\Controllers\DashboardController::deleteMessage(),
+
+    $uri === '/admin/goal/save' && $method === 'POST'
+        => \App\Controllers\DashboardController::saveGoal(),
+
+    $uri === '/admin/goal/delete' && $method === 'POST'
+        => \App\Controllers\DashboardController::deleteGoal(),
+
+    // ── Motivation: Nachrichten als gelesen markieren (Kind) ─────────────
+    $uri === '/learn/message/seen' && $method === 'POST'
+        => \App\Controllers\DashboardController::markMessageSeen(),
+
     // ── Zusätzliche Abenteuer (Admin) ───────────────────────────────────
     $uri === '/admin/adventures' && $method === 'GET'
         => \App\Controllers\AdventureController::list(),

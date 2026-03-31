@@ -369,6 +369,174 @@ foreach ($theme['biomes'] ?? [] as $tb) {
       margin: -0.5rem 0;
       opacity: 0.4;
     }
+
+    /* ── Warm-Up Banner ── */
+    .warmup-banner {
+      background: linear-gradient(135deg, <?= $themeColorPrimary ?> 0%, <?= $themeColorAccent ?> 100%);
+      color: #fff;
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+    .warmup-banner .wu-icon { font-size: 2rem; flex-shrink: 0; }
+    .warmup-banner .wu-text h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.15rem; }
+    .warmup-banner .wu-text p  { font-size: 0.85rem; margin: 0; opacity: 0.9; }
+
+    /* ── Parent Message Card ── */
+    .parent-msg-card {
+      background: #fff8e1;
+      border: 2px solid #ffd54f;
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+    .parent-msg-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #795548;
+      margin-bottom: 0.6rem;
+    }
+    .parent-msg-text {
+      font-size: 1rem;
+      color: #3e2723;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .parent-msg-close {
+      position: absolute;
+      top: 0.7rem;
+      right: 0.9rem;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #bbb;
+      line-height: 1;
+    }
+    .parent-msg-close:hover { color: #888; }
+    .parent-msg-counter {
+      font-size: 0.75rem;
+      color: #a0897a;
+      margin-top: 0.5rem;
+    }
+
+    /* ── Family Goal Card ── */
+    .family-goal-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.1);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .family-goal-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #333;
+      margin-bottom: 0.6rem;
+    }
+    .family-goal-title { font-size: 1rem; color: #333; margin-bottom: 0.75rem; }
+    .family-goal-bar-wrap {
+      height: 14px;
+      background: #e0e0e0;
+      border-radius: 7px;
+      overflow: hidden;
+      margin-bottom: 0.4rem;
+    }
+    .family-goal-bar-fill {
+      height: 100%;
+      border-radius: 7px;
+      background: linear-gradient(90deg, <?= $themeColorPrimary ?>, <?= $themeColorAccent ?>);
+      transition: width .5s ease;
+    }
+    .family-goal-sub {
+      font-size: 0.8rem;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+    }
+    .family-goal-reward {
+      margin-top: 0.75rem;
+      background: #f1f8e9;
+      border-left: 3px solid #7cb342;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.88rem;
+      color: #33691e;
+    }
+    .family-goal-completed {
+      background: linear-gradient(135deg, #1b5e20, #2e7d32);
+      color: #fff;
+      text-align: center;
+      padding: 1rem;
+      border-radius: 14px;
+      margin-bottom: 1.5rem;
+    }
+    .family-goal-completed h3 { font-size: 1.1rem; margin: 0 0 0.4rem; }
+    .family-goal-completed p  { font-size: 0.9rem; margin: 0; opacity: 0.92; }
+
+    /* ── Warm-Up Modal ── */
+    .warmup-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .warmup-overlay.active { display: flex; }
+    .warmup-modal {
+      background: #fff;
+      border-radius: 20px;
+      padding: 2rem 1.75rem;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+      animation: wu-pop .25s ease;
+    }
+    @keyframes wu-pop {
+      from { transform: scale(.85); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .warmup-modal .wm-icon  { font-size: 3.5rem; margin-bottom: 0.75rem; }
+    .warmup-modal h2        { font-size: 1.3rem; margin: 0 0 0.5rem; color: #222; }
+    .warmup-modal .wm-sub   { color: #777; font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .warmup-modal .wm-msg   {
+      background: #fff8e1; border-left: 3px solid #ffd54f;
+      border-radius: 0 8px 8px 0; padding: .6rem .9rem;
+      text-align: left; margin-bottom: 1rem; font-size: .9rem; color: #5d4037;
+    }
+    .warmup-modal .wm-goal  {
+      background: #f1f8e9; border-radius: 8px;
+      padding: .6rem .9rem; margin-bottom: 1rem;
+      font-size: .88rem; color: #33691e; text-align: left;
+    }
+    .btn-warmup-start {
+      display: block;
+      width: 100%;
+      padding: 0.85rem;
+      background: <?= $themeColorAccent ?>;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-warmup-start:hover { background: <?= $themeColorPrimaryDk ?>; }
+    .warmup-countdown { font-size: 0.78rem; color: #aaa; margin-top: 0.5rem; }
   </style>
 </head>
 <body class="theme-<?= htmlspecialchars($themeName) ?>">
@@ -385,6 +553,45 @@ foreach ($theme['biomes'] ?? [] as $tb) {
 </header>
 
 <main class="map-container">
+
+  <!-- Warm-Up Begrüßung -->
+  <?php
+    $hour = (int)date('G');
+    if ($hour < 11)       { $greeting = 'Guten Morgen'; $wu_icon = '🌅'; }
+    elseif ($hour < 17)   { $greeting = 'Hallo';        $wu_icon = '☀️'; }
+    else                  { $greeting = 'Guten Abend';  $wu_icon = '🌙'; }
+
+    $motivations = [
+        'Du schaffst das — einen Schritt nach dem anderen! 💪',
+        'Jede Übungseinheit macht dich besser. Weiter so! 🚀',
+        'Heute bist du wieder ein Stück schlauer als gestern! ⭐',
+        'Rechtschreiben lernt man durch Üben — und du übst! 🏆',
+        'Jedes richtig geschriebene Wort ist ein Sieg! ✅',
+    ];
+    $motivText = $motivations[($totalSessions + (int)date('j')) % count($motivations)];
+  ?>
+  <div class="warmup-banner">
+    <span class="wu-icon"><?= $wu_icon ?></span>
+    <div class="wu-text">
+      <h3><?= $greeting ?>, <?= htmlspecialchars($childName) ?>!</h3>
+      <p><?= htmlspecialchars($motivText) ?></p>
+    </div>
+  </div>
+
+  <!-- Eltern-Nachrichten -->
+  <?php if (!empty($parentMessages)): ?>
+    <div class="parent-msg-card" id="parent-msg-card">
+      <div class="parent-msg-header">
+        <span><?= htmlspecialchars($parentMessages[0]['emoji'] ?? '💌') ?></span>
+        Nachricht von Papa
+      </div>
+      <div class="parent-msg-text"><?= htmlspecialchars($parentMessages[0]['message']) ?></div>
+      <?php if (count($parentMessages) > 1): ?>
+        <div class="parent-msg-counter">+ <?= count($parentMessages) - 1 ?> weitere Nachricht(en)</div>
+      <?php endif; ?>
+      <button class="parent-msg-close" onclick="dismissParentMsg()" title="Gelesen">✕</button>
+    </div>
+  <?php endif; ?>
 
   <?php if (!empty($pendingAdventures)): ?>
     <div class="adventure-banner">
@@ -464,6 +671,53 @@ foreach ($theme['biomes'] ?? [] as $tb) {
       </div>
       <?php endif; ?>
     </div>
+
+    <!-- Familienziel -->
+    <?php if (!empty($familyGoal)): ?>
+      <?php if ($familyGoal['status'] === 'completed'): ?>
+        <div class="family-goal-completed">
+          <h3>🎉 Ziel erreicht!</h3>
+          <p><?= htmlspecialchars($familyGoal['title']) ?></p>
+          <?php if ($familyGoal['reward_text']): ?>
+            <p style="margin-top:.5rem;font-weight:700">
+              🎁 <?= htmlspecialchars($familyGoal['reward_text']) ?>
+            </p>
+          <?php endif; ?>
+        </div>
+      <?php else:
+          $goalProgress  = (int)($familyGoal['progress'] ?? 0);
+          $goalValue     = (int)$familyGoal['goal_value'];
+          $goalPct       = min(100, $goalValue > 0 ? round($goalProgress / $goalValue * 100) : 0);
+          $goalTypeLabel = match($familyGoal['goal_type']) {
+            'sessions' => 'Einheiten',
+            'quests'   => 'Quests',
+            'streak'   => 'Tage Streak',
+            default    => 'Einheiten',
+          };
+          $periodLabel = match($familyGoal['period']) {
+            'week'    => 'diese Woche',
+            'month'   => 'diesen Monat',
+            default   => 'gesamt',
+          };
+      ?>
+      <div class="family-goal-card">
+        <div class="family-goal-header">🎯 Familienziel <?= htmlspecialchars($periodLabel) ?></div>
+        <div class="family-goal-title"><?= htmlspecialchars($familyGoal['title']) ?></div>
+        <div class="family-goal-bar-wrap">
+          <div class="family-goal-bar-fill" style="width:<?= $goalPct ?>%"></div>
+        </div>
+        <div class="family-goal-sub">
+          <span><?= $goalProgress ?> / <?= $goalValue ?> <?= htmlspecialchars($goalTypeLabel) ?></span>
+          <span><?= $goalPct ?>%</span>
+        </div>
+        <?php if ($familyGoal['reward_text']): ?>
+          <div class="family-goal-reward">
+            🎁 Belohnung: <?= htmlspecialchars($familyGoal['reward_text']) ?>
+          </div>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+    <?php endif; ?>
 
     <!-- Nächstes Achievement -->
     <?php if (!empty($nextAchievements)): $nxt = $nextAchievements[0]; ?>
@@ -594,7 +848,8 @@ foreach ($theme['biomes'] ?? [] as $tb) {
               <div class="quest-action">
                 <?php if ($isPracticeTarget && $activeUnit): ?>
                   <a href="<?= url('/learn/session?unit_id=' . (int)$activeUnit['id']) ?>"
-                     class="btn-practice pulse">
+                     class="btn-practice pulse"
+                     onclick="showWarmup(event, this.href, '<?= htmlspecialchars(addslashes($quest['title'])) ?>')">
                     Üben!
                   </a>
                 <?php elseif ($qIsCompleted): ?>
@@ -614,7 +869,8 @@ foreach ($theme['biomes'] ?? [] as $tb) {
                     if ($unit):
                   ?>
                     <a href="<?= url('/learn/session?unit_id=' . (int)$unit['id']) ?>"
-                       class="btn-practice">
+                       class="btn-practice"
+                       onclick="showWarmup(event, this.href, '<?= htmlspecialchars(addslashes($quest['title'])) ?>')">
                       Üben
                     </a>
                   <?php endif; ?>
@@ -630,6 +886,104 @@ foreach ($theme['biomes'] ?? [] as $tb) {
   <?php endif; ?>
 
 </main>
+
+<!-- Warm-Up Modal -->
+<div class="warmup-overlay" id="warmup-overlay">
+  <div class="warmup-modal">
+    <div class="wm-icon">⚡</div>
+    <h2>Bereit?</h2>
+    <div class="wm-sub" id="wm-quest-title"></div>
+
+    <?php if (!empty($parentMessages)): ?>
+      <div class="wm-msg">
+        <?= htmlspecialchars($parentMessages[0]['emoji'] ?? '💌') ?>
+        <?= htmlspecialchars($parentMessages[0]['message']) ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if (!empty($familyGoal) && $familyGoal['status'] === 'active'): ?>
+      <?php
+        $gp  = (int)($familyGoal['progress'] ?? 0);
+        $gv  = (int)$familyGoal['goal_value'];
+        $gtl = match($familyGoal['goal_type']) {
+          'sessions' => 'Einheiten', 'quests' => 'Quests', default => 'Tage'
+        };
+      ?>
+      <div class="wm-goal">
+        🎯 Ziel: <?= htmlspecialchars($familyGoal['title']) ?><br>
+        Fortschritt: <?= $gp ?>/<?= $gv ?> <?= $gtl ?>
+        <?php if ($familyGoal['reward_text']): ?>
+          · 🎁 <?= htmlspecialchars($familyGoal['reward_text']) ?>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+
+    <button class="btn-warmup-start" id="wm-start-btn" onclick="startSession()">
+      Los geht's! 🚀
+    </button>
+    <div class="warmup-countdown" id="wm-countdown"></div>
+  </div>
+</div>
+
+<script>
+const CSRF_TOKEN = <?= json_encode($csrfToken) ?>;
+let warmupTarget = null;
+let warmupTimer  = null;
+
+function showWarmup(e, href, questTitle) {
+  e.preventDefault();
+  warmupTarget = href;
+
+  document.getElementById('wm-quest-title').textContent = questTitle || '';
+  document.getElementById('warmup-overlay').classList.add('active');
+
+  // Countdown: 5 Sek auto-start
+  let secs = 5;
+  const countdown = document.getElementById('wm-countdown');
+  const btn       = document.getElementById('wm-start-btn');
+  countdown.textContent = 'Startet automatisch in ' + secs + ' Sekunden …';
+  warmupTimer = setInterval(() => {
+    secs--;
+    if (secs <= 0) {
+      clearInterval(warmupTimer);
+      startSession();
+    } else {
+      countdown.textContent = 'Startet automatisch in ' + secs + ' Sekunden …';
+    }
+  }, 1000);
+}
+
+function startSession() {
+  clearInterval(warmupTimer);
+  if (!warmupTarget) return;
+  // Nachrichten als gelesen markieren (fire & forget)
+  fetch(<?= json_encode(url('/learn/message/seen')) ?>, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csrf_token: CSRF_TOKEN }),
+  }).catch(() => {});
+  window.location.href = warmupTarget;
+}
+
+// Eltern-Nachricht wegklicken
+function dismissParentMsg() {
+  const card = document.getElementById('parent-msg-card');
+  if (card) card.style.display = 'none';
+  fetch(<?= json_encode(url('/learn/message/seen')) ?>, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csrf_token: CSRF_TOKEN }),
+  }).catch(() => {});
+}
+
+// Klick außerhalb Modal schließt es
+document.getElementById('warmup-overlay').addEventListener('click', function(e) {
+  if (e.target === this) {
+    clearInterval(warmupTimer);
+    this.classList.remove('active');
+  }
+});
+</script>
 
 </body>
 </html>

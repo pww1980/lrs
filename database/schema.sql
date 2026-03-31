@@ -437,3 +437,29 @@ CREATE TABLE IF NOT EXISTS custom_adventure_sentences (
   sentence     TEXT NOT NULL,
   order_index  INTEGER NOT NULL DEFAULT 0
 );
+
+-- Block 8 — Motivations-Features
+CREATE TABLE IF NOT EXISTS parent_messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  child_id   INTEGER NOT NULL REFERENCES users(id),
+  admin_id   INTEGER NOT NULL REFERENCES users(id),
+  message    TEXT NOT NULL,
+  emoji      VARCHAR(10) DEFAULT '💌',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  seen_at    DATETIME NULL
+);
+
+CREATE TABLE IF NOT EXISTS family_goals (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  child_id     INTEGER NOT NULL REFERENCES users(id),
+  admin_id     INTEGER NOT NULL REFERENCES users(id),
+  title        VARCHAR(200) NOT NULL,
+  goal_type    TEXT CHECK(goal_type IN ('sessions','quests','streak')) DEFAULT 'sessions',
+  goal_value   INTEGER NOT NULL,
+  period       TEXT CHECK(period IN ('week','month','alltime')) DEFAULT 'week',
+  reward_text  TEXT NULL,
+  status       TEXT CHECK(status IN ('active','completed','cancelled')) DEFAULT 'active',
+  created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME NULL,
+  period_start DATE NOT NULL
+);

@@ -199,6 +199,31 @@ class SessionController
         $advStmt->execute([$userId]);
         $pendingAdventures = $advStmt->fetchAll();
 
+        // Eltern-Nachrichten (ungelesen)
+        $msgStmt = db()->prepare("
+            SELECT id, message, emoji, created_at
+            FROM parent_messages
+            WHERE child_id=? AND seen_at IS NULL
+            ORDER BY created_at DESC
+        ");
+        $msgStmt->execute([$userId]);
+        $parentMessages = $msgStmt->fetchAll();
+
+        // Aktives Familienziel + Fortschritt
+        $goalStmt = db()->prepare("
+            SELECT * FROM family_goals
+            WHERE child_id=? AND status IN ('active','completed')
+            ORDER BY created_at DESC LIMIT 1
+        ");
+        $goalStmt->execute([$userId]);
+        $familyGoal = $goalStmt->fetch() ?: null;
+
+        if ($familyGoal && $familyGoal['status'] === 'active') {
+            $familyGoal['progress'] = \App\Controllers\DashboardController::computeGoalProgressPublic(
+                $userId, $familyGoal
+            );
+        }
+
         require __DIR__ . '/../Views/learn/questlog.php';
     }
 

@@ -555,12 +555,18 @@ $formatLabel = [
     <div class="dash-section-title">✅ Aktive Lernpläne</div>
     <?php foreach ($withActivePlan as $child): ?>
     <div style="padding:.75rem 1rem;background:#e8f5e9;border:1px solid #a5d6a7;
-                border-radius:8px;margin-bottom:.5rem;display:flex;align-items:center;gap:.75rem">
+                border-radius:8px;margin-bottom:.5rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
       <span style="font-size:1.3rem">🧒</span>
       <div style="flex:1">
         <strong><?= htmlspecialchars($child['display_name']) ?></strong>
         — Plan aktiviert am <?= date('d.m.Y', strtotime($child['active_plan']['activated_at'] ?? 'now')) ?>
       </div>
+      <button class="btn btn-sm btn-secondary"
+              style="font-size:.75rem"
+              onclick="resetPlan(<?= (int)$child['active_plan']['id'] ?>, '<?= htmlspecialchars(addslashes($child['display_name'])) ?>', <?= (int)($child['latest_test']['id'] ?? 0) ?>)"
+              title="Lernplan zurücksetzen und neu generieren (Fehleranalyse bleibt erhalten)">
+        🔄 Plan zurücksetzen
+      </button>
     </div>
     <?php endforeach; ?>
   </section>
@@ -918,6 +924,7 @@ const URL_ANALYSIS_RUN     = <?= json_encode(url('/admin/analysis/run')) ?>;
 const URL_QUEST_TOGGLE     = <?= json_encode(url('/admin/plan/quest-toggle')) ?>;
 const URL_PLAN_APPROVE     = <?= json_encode(url('/admin/plan/approve')) ?>;
 const URL_SESSION_DETAIL   = <?= json_encode(url('/admin/sessions/detail')) ?>;
+const URL_PLAN_RESET       = <?= json_encode(url('/admin/plan/reset')) ?>;
 
 // ── Session-Details (pro Wort) ────────────────────────────────────────
 var _sessionDetailLoaded = {};
@@ -1067,6 +1074,33 @@ function toggleQuest(questId, toggleEl) {
         // Einheiten-Text aktualisieren
         const unitSpan = row.querySelector('.quest-units');
         if (unitSpan) unitSpan.textContent = isOn ? 'aktualisiert' : 'übersprungen';
+      } else {
+        showToast('❌ ' + (data.error || 'Fehler'), 'error');
+      }
+    })
+    .catch(() => showToast('❌ Netzwerkfehler.', 'error'));
+}
+
+// ── Plan zurücksetzen & neu generieren ───────────────────────────────
+function resetPlan(planId, childName, testId) {
+  if (!confirm('Lernplan von ' + childName + ' zurücksetzen?\n\nDer aktuelle Plan wird archiviert und ein neuer Plan wird sofort generiert. Die Fehleranalyse bleibt erhalten.\n\nAchtung: Der Fortschritt im aktuellen Plan geht verloren.')) return;
+
+  fetch(URL_PLAN_RESET, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csrf_token: CSRF, plan_id: planId }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast('✅ Plan zurückgesetzt — generiere neuen Plan…');
+        // Automatisch neuen Plan generieren
+        setTimeout(() => {
+          const fakeBtn = document.createElement('button');
+          fakeBtn.dataset.child = childName;
+          document.body.appendChild(fakeBtn);
+          runAnalysis(testId, fakeBtn, true);
+        }, 800);
       } else {
         showToast('❌ ' + (data.error || 'Fehler'), 'error');
       }

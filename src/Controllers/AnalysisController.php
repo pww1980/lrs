@@ -607,8 +607,17 @@ class AnalysisController
                 ]);
                 $biomeId = (int)$db->lastInsertId();
 
+                $block = $biomeData['block'] ?? 'A';
+
                 foreach ($biomeData['quests'] ?? [] as $questData) {
                     $category = $questData['category'] ?? '';
+
+                    // Sicherstellen dass Kategorie zum Block passt (z.B. Block B → B1-B5)
+                    if ($category === '' || strtoupper($category[0]) !== strtoupper($block)) {
+                        error_log("saveLearningPlan: Quest category '$category' passt nicht zu Block '$block' — Quest übersprungen.");
+                        continue;
+                    }
+
                     $severity = $severityMap[$category]  ?? 'mild';
                     $strategy = $strategyMap[$category]  ?? 1;
 

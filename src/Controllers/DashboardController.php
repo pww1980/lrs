@@ -40,6 +40,63 @@ class DashboardController
     }
 
     /**
+     * POST /admin/plan/reset  (AJAX, JSON-Body)
+     * Setzt einen aktiven/draft Plan auf 'superseded' — ermöglicht Neu-Generierung.
+     */
+    public static function resetPlan(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        ini_set('display_errors', '0');
+        ob_start();
+        header('Content-Type: application/json');
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            ob_end_clean();
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF-Fehler']);
+            exit;
+        }
+
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $planId       = (int)($data['plan_id'] ?? 0);
+
+        // Plan validieren
+        if ($isSuperadmin) {
+            $stmt = db()->prepare(
+                "SELECT id, user_id, status FROM learning_plans WHERE id=?"
+            );
+            $stmt->execute([$planId]);
+        } else {
+            $stmt = db()->prepare(
+                "SELECT lp.id, lp.user_id, lp.status
+                 FROM learning_plans lp
+                 JOIN child_admins ca ON lp.user_id = ca.child_id
+                 WHERE lp.id=? AND ca.admin_id=?"
+            );
+            $stmt->execute([$planId, $adminId]);
+        }
+        $plan = $stmt->fetch();
+
+        if (!$plan || !in_array($plan['status'], ['active', 'draft'])) {
+            ob_end_clean();
+            http_response_code(404);
+            echo json_encode(['error' => 'Plan nicht gefunden oder bereits archiviert']);
+            exit;
+        }
+
+        // Plan auf 'superseded' setzen (nicht löschen — Verlauf erhalten)
+        db()->prepare(
+            "UPDATE learning_plans SET status='superseded' WHERE id=?"
+        )->execute([$planId]);
+
+        ob_end_clean();
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    /**
      * GET /admin/sessions/detail?session_id=X  (AJAX)
      * Gibt alle Items einer Session mit Eingaben zurück (für Admin-Verlauf).
      */

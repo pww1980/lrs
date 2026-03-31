@@ -451,6 +451,54 @@ PROMPT;
         ];
     }
 
+    /**
+     * Generiert ein Kurzdiktat (3-5 Sätze) aus vorgegebenen Lernwörtern.
+     * Jeder Satz soll mindestens ein Lernwort enthalten.
+     *
+     * @param  string[] $words        Die Lernwörter (exakt so geschrieben)
+     * @param  array    $childProfile ['display_name', 'grade_level', 'theme']
+     * @return string[]               Array von Sätzen
+     */
+    public function generateDiktat(array $words, array $childProfile): array
+    {
+        $wordsStr  = implode(', ', $words);
+        $grade     = (int)($childProfile['grade_level'] ?? 4);
+        $theme     = $childProfile['theme'] ?? 'minecraft';
+        $themeHint = match ($theme) {
+            'minecraft' => 'Minecraft (Abenteuer, Blöcke, Creeper, Diamanten, Dörfer)',
+            'space'     => 'Weltraum (Raketen, Planeten, Astronauten)',
+            'ocean'     => 'Unterwasser (Fische, Korallen, Tauchen)',
+            default     => 'alltäglich, kindgerecht',
+        };
+
+        $prompt = <<<PROMPT
+Du bist ein Diktat-Trainer für Grundschulkinder.
+Schreibe ein kurzes Diktat mit genau 4 Sätzen für ein Kind in Klasse {$grade}.
+
+Diese Lernwörter MÜSSEN alle im Diktat vorkommen, exakt so geschrieben:
+{$wordsStr}
+
+Thema: {$themeHint}
+Stil: altersgerecht, spannend, kurze Sätze (max. 12 Wörter pro Satz)
+Wichtig: Jedes Lernwort soll in mindestens einem Satz vorkommen.
+
+Antworte NUR als JSON-Array mit genau 4 Strings:
+["Satz 1.", "Satz 2.", "Satz 3.", "Satz 4."]
+PROMPT;
+
+        $raw  = $this->sendPrompt($prompt, 'content_generation', maxTokens: 800);
+        $data = $this->parseJson($raw);
+
+        if (!is_array($data)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(fn($s) => trim((string)$s), $data),
+            fn($s) => $s !== ''
+        ));
+    }
+
     // ── Getter ────────────────────────────────────────────────────────
 
     public function getProvider(): string     { return $this->provider; }

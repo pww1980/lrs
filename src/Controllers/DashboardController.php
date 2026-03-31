@@ -40,6 +40,75 @@ class DashboardController
     }
 
     /**
+     * GET /admin/sessions/detail?session_id=X  (AJAX)
+     * Gibt alle Items einer Session mit Eingaben zurück (für Admin-Verlauf).
+     */
+    public static function sessionDetail(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        ini_set('display_errors', '0');
+        header('Content-Type: application/json');
+
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $sessionId    = (int)($_GET['session_id'] ?? 0);
+
+        if (!$sessionId) {
+            echo json_encode(['error' => 'Ungültige Session-ID']);
+            exit;
+        }
+
+        // Prüfen, ob diese Session einem Kind des Admins gehört
+        if ($isSuperadmin) {
+            $sesStmt = db()->prepare("SELECT user_id FROM sessions WHERE id=?");
+            $sesStmt->execute([$sessionId]);
+        } else {
+            $sesStmt = db()->prepare(
+                "SELECT s.user_id FROM sessions s
+                 JOIN child_admins ca ON s.user_id = ca.child_id
+                 WHERE s.id=? AND ca.admin_id=?"
+            );
+            $sesStmt->execute([$sessionId, $adminId]);
+        }
+        $sesRow = $sesStmt->fetch();
+        if (!$sesRow) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Zugriff verweigert']);
+            exit;
+        }
+
+        // Items laden
+        $itemStmt = db()->prepare(
+            "SELECT si.id, si.format, si.final_correct, si.custom_text,
+                    w.word,
+                    s.sentence,
+                    (SELECT sa.user_input FROM session_attempts sa
+                     WHERE sa.item_id = si.id
+                     ORDER BY sa.attempt_number DESC LIMIT 1) AS user_input
+             FROM session_items si
+             LEFT JOIN words w ON si.word_id = w.id
+             LEFT JOIN sentences s ON si.sentence_id = s.id
+             WHERE si.session_id = ?
+             ORDER BY si.order_index"
+        );
+        $itemStmt->execute([$sessionId]);
+        $rows = $itemStmt->fetchAll();
+
+        $items = [];
+        foreach ($rows as $r) {
+            $text = $r['custom_text'] ?? $r['word'] ?? $r['sentence'] ?? '—';
+            $items[] = [
+                'text'        => $text,
+                'user_input'  => $r['user_input'],
+                'final_correct'=> $r['final_correct'] !== null ? (bool)$r['final_correct'] : null,
+            ];
+        }
+
+        echo json_encode(['items' => $items]);
+        exit;
+    }
+
+    /**
      * POST /admin/plan/approve  (AJAX, JSON-Body)
      * Aktiviert einen Draft-Plan: status → 'active', erste Sektion freischalten.
      */

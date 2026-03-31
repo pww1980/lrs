@@ -324,6 +324,8 @@ $formatLabel = [
                  class="btn btn-sm btn-secondary" title="Profil bearbeiten">✏️</a>
               <a href="<?= url('/admin/words?child_id=' . (int)$child['id']) ?>"
                  class="btn btn-sm btn-secondary" title="Wortliste" style="margin-left:.25rem">📝</a>
+              <a href="<?= url('/admin/adventures?child_id=' . (int)$child['id']) ?>"
+                 class="btn btn-sm btn-secondary" title="Abenteuer verwalten" style="margin-left:.25rem">🗺️</a>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -799,6 +801,102 @@ $formatLabel = [
   </section>
   <?php endif; ?>
 
+  <!-- ══════════════════════════════════════════════════════════════════
+       SESSION-VERLAUF pro Kind
+  ══════════════════════════════════════════════════════════════════════ -->
+  <?php if (!empty($children)): ?>
+  <section class="dash-section">
+    <div class="dash-section-title">📋 Übungseinheiten — Verlauf</div>
+    <?php foreach ($children as $child):
+      $cid = (int)$child['id'];
+      // Letzte 20 abgeschlossene Sessions laden
+      $sesHistStmt = db()->prepare(
+        "SELECT s.id, s.started_at, s.correct_first_try, s.wrong_total, s.total_items,
+                s.duration_seconds,
+                CASE WHEN s.custom_adventure_id IS NOT NULL THEN ca.title
+                     ELSE COALESCE(q.title, pu.format)
+                END AS label,
+                CASE WHEN s.custom_adventure_id IS NOT NULL THEN 1 ELSE 0 END AS is_adventure
+         FROM sessions s
+         LEFT JOIN plan_units pu ON s.plan_unit_id = pu.id
+         LEFT JOIN quests q ON pu.quest_id = q.id
+         LEFT JOIN custom_adventures ca ON s.custom_adventure_id = ca.id
+         WHERE s.user_id=? AND s.status='completed'
+         ORDER BY s.started_at DESC
+         LIMIT 20"
+      );
+      $sesHistStmt->execute([$cid]);
+      $sessionHistory = $sesHistStmt->fetchAll();
+    ?>
+    <div style="margin-bottom:1.5rem">
+      <h3 style="font-size:.95rem;color:#444;margin:.5rem 0 .75rem">
+        🧒 <?= htmlspecialchars($child['display_name']) ?>
+      </h3>
+      <?php if (empty($sessionHistory)): ?>
+        <p style="color:#999;font-size:.85rem">Noch keine Übungseinheiten.</p>
+      <?php else: ?>
+      <div style="overflow-x:auto">
+        <table class="table" style="font-size:.83rem">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Einheit</th>
+              <th style="text-align:center">✅ Richtig</th>
+              <th style="text-align:center">❌ Falsch</th>
+              <th style="text-align:center">Gesamt</th>
+              <th style="text-align:center">Dauer</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($sessionHistory as $sh): ?>
+            <tr>
+              <td><?= date('d.m.Y', strtotime($sh['started_at'])) ?></td>
+              <td>
+                <?php if ($sh['is_adventure']): ?>
+                  <span title="Zusätzliches Abenteuer">🗺️</span>
+                <?php endif; ?>
+                <?= htmlspecialchars($sh['label'] ?? '—') ?>
+              </td>
+              <td style="text-align:center;color:#2e7d32;font-weight:600">
+                <?= (int)$sh['correct_first_try'] ?>
+              </td>
+              <td style="text-align:center;color:#c62828;font-weight:600">
+                <?= (int)$sh['wrong_total'] ?>
+              </td>
+              <td style="text-align:center"><?= (int)$sh['total_items'] ?></td>
+              <td style="text-align:center;color:#666">
+                <?php
+                  $dur = (int)$sh['duration_seconds'];
+                  echo $dur > 0 ? floor($dur/60) . 'min' : '—';
+                ?>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary"
+                        onclick="loadSessionDetail(<?= (int)$sh['id'] ?>, this)"
+                        data-session="<?= (int)$sh['id'] ?>">
+                  Details
+                </button>
+              </td>
+            </tr>
+            <tr id="detail-row-<?= (int)$sh['id'] ?>" style="display:none">
+              <td colspan="7" style="padding:.25rem .75rem .75rem">
+                <div id="detail-body-<?= (int)$sh['id'] ?>"
+                     style="font-size:.82rem;background:#fafafa;border-radius:6px;padding:.75rem">
+                  Lade…
+                </div>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
+
   <!-- Keine Kinder + kein Ausstehend -->
   <?php if (empty($pendingAnalysis) && empty($withDraftPlan) && !empty($children)): ?>
   <div class="empty-state" style="margin-top:2rem">
@@ -814,11 +912,66 @@ $formatLabel = [
 
 <script>
 const CSRF = <?= json_encode($csrfToken) ?>;
-const URL_ANALYSIS_STEP1 = <?= json_encode(url('/admin/analysis/step1')) ?>;
-const URL_ANALYSIS_STEP2 = <?= json_encode(url('/admin/analysis/step2')) ?>;
-const URL_ANALYSIS_RUN   = <?= json_encode(url('/admin/analysis/run')) ?>;
-const URL_QUEST_TOGGLE   = <?= json_encode(url('/admin/plan/quest-toggle')) ?>;
-const URL_PLAN_APPROVE   = <?= json_encode(url('/admin/plan/approve')) ?>;
+const URL_ANALYSIS_STEP1   = <?= json_encode(url('/admin/analysis/step1')) ?>;
+const URL_ANALYSIS_STEP2   = <?= json_encode(url('/admin/analysis/step2')) ?>;
+const URL_ANALYSIS_RUN     = <?= json_encode(url('/admin/analysis/run')) ?>;
+const URL_QUEST_TOGGLE     = <?= json_encode(url('/admin/plan/quest-toggle')) ?>;
+const URL_PLAN_APPROVE     = <?= json_encode(url('/admin/plan/approve')) ?>;
+const URL_SESSION_DETAIL   = <?= json_encode(url('/admin/sessions/detail')) ?>;
+
+// ── Session-Details (pro Wort) ────────────────────────────────────────
+var _sessionDetailLoaded = {};
+function loadSessionDetail(sessionId, btn) {
+  var detailRow  = document.getElementById('detail-row-'  + sessionId);
+  var detailBody = document.getElementById('detail-body-' + sessionId);
+  if (!detailRow) return;
+
+  // Toggle
+  if (detailRow.style.display !== 'none') {
+    detailRow.style.display = 'none';
+    btn.textContent = 'Details';
+    return;
+  }
+
+  detailRow.style.display = 'table-row';
+  btn.textContent = 'Verbergen';
+
+  if (_sessionDetailLoaded[sessionId]) return; // schon geladen
+
+  fetch(URL_SESSION_DETAIL + '&session_id=' + sessionId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _sessionDetailLoaded[sessionId] = true;
+      if (data.error) { detailBody.textContent = data.error; return; }
+      var html = '<table style="width:100%;border-collapse:collapse">' +
+        '<tr style="color:#666;font-size:.78rem">' +
+        '<th style="text-align:left;padding:.2rem .4rem">Wort / Text</th>' +
+        '<th style="padding:.2rem .4rem">Eingabe</th>' +
+        '<th style="padding:.2rem .4rem">Ergebnis</th>' +
+        '</tr>';
+      data.items.forEach(function(item) {
+        var ok = item.final_correct;
+        var color = ok === null ? '#999' : (ok ? '#2e7d32' : '#c62828');
+        var icon  = ok === null ? '—'   : (ok ? '✅' : '❌');
+        html += '<tr style="border-top:1px solid #eee">' +
+          '<td style="padding:.25rem .4rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+            escHtml(item.text) + '</td>' +
+          '<td style="padding:.25rem .4rem;text-align:center;color:' + color + '">' +
+            escHtml(item.user_input || '—') + '</td>' +
+          '<td style="padding:.25rem .4rem;text-align:center">' + icon + '</td>' +
+          '</tr>';
+      });
+      html += '</table>';
+      detailBody.innerHTML = html;
+    })
+    .catch(function() { detailBody.textContent = 'Fehler beim Laden.'; });
+}
+
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
 
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');

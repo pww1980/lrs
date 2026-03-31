@@ -8,11 +8,12 @@
 
   if (typeof SESSION_DATA === 'undefined') return;
 
-  var data       = SESSION_DATA;
-  var items      = data.items;   // [{id, format, order, is_done, is_correct, gap_context}]
-  var csrfToken  = data.csrfToken;
-  var sessionId  = data.sessionId;
-  var format     = data.format;
+  var data        = SESSION_DATA;
+  var items       = data.items;   // [{id, format, order, is_done, is_correct, gap_context}]
+  var csrfToken   = data.csrfToken;
+  var sessionId   = data.sessionId;
+  var format      = data.format;
+  var isAdventure = !!data.is_adventure;
 
   // ── DOM refs ──────────────────────────────────────────────────────────
 
@@ -449,16 +450,22 @@
 
     completeScreen.style.display = 'block';
 
-    // KI-Feedback asynchron nachladen
-    fetchSessionFeedback();
+    if (result.adventure_done || isAdventure) {
+      // Adventure: kein KI-Feedback, einfaches Banner
+      questBanner.textContent   = '🗺️ Abenteuer abgeschlossen!';
+      questBanner.style.display = 'block';
+    } else {
+      // Normale Einheit: KI-Feedback asynchron nachladen
+      fetchSessionFeedback();
 
-    if (result.quest_completed) {
-      questBanner.textContent    = '🏆 Quest abgeschlossen!';
-      questBanner.style.display  = 'block';
-    }
-    if (result.biome_completed) {
-      questBanner.textContent    = '🌟 Biom abgeschlossen! Neues Gebiet freigeschaltet!';
-      questBanner.style.display  = 'block';
+      if (result.quest_completed) {
+        questBanner.textContent    = '🏆 Quest abgeschlossen!';
+        questBanner.style.display  = 'block';
+      }
+      if (result.biome_completed) {
+        questBanner.textContent    = '🌟 Biom abgeschlossen! Neues Gebiet freigeschaltet!';
+        questBanner.style.display  = 'block';
+      }
     }
 
     var s = result.stats || {};

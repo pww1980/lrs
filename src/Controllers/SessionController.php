@@ -114,6 +114,25 @@ class SessionController
         $totalSessions = (int)$sessStmt->fetchColumn();
         $childName     = $_SESSION['display_name'] ?? 'Kind';
 
+        // Pending/Active Adventures laden
+        $advStmt = db()->prepare(
+            "SELECT ca.id, ca.title, ca.scheduled_date, ca.school_date, ca.status,
+                    ca.diktat_generated,
+                    COUNT(DISTINCT caw.id) AS word_count,
+                    COUNT(DISTINCT cas.id) AS sentence_count,
+                    (SELECT s.id FROM sessions s
+                     WHERE s.custom_adventure_id = ca.id AND s.status = 'active'
+                     LIMIT 1) AS active_session_id
+             FROM custom_adventures ca
+             LEFT JOIN custom_adventure_words caw ON caw.adventure_id = ca.id
+             LEFT JOIN custom_adventure_sentences cas ON cas.adventure_id = ca.id
+             WHERE ca.child_id = ? AND ca.status IN ('pending','active')
+             GROUP BY ca.id
+             ORDER BY ca.scheduled_date ASC, ca.created_at ASC"
+        );
+        $advStmt->execute([$userId]);
+        $pendingAdventures = $advStmt->fetchAll();
+
         require __DIR__ . '/../Views/learn/questlog.php';
     }
 
@@ -148,6 +167,47 @@ class SessionController
             $items    = self::getSessionItems($session['id']);
             $progress = self::getSessionProgress($session['id']);
         }
+
+        require __DIR__ . '/../Views/learn/session.php';
+    }
+
+    /**
+     * GET /learn/adventure?session_id=X
+     * Zeigt eine laufende Adventure-Session (nutzt dasselbe session.php View).
+     */
+    public static function showAdventure(): void
+    {
+        Auth::requireRole('child');
+        $userId    = (int)$_SESSION['user_id'];
+        $sessionId = (int)($_GET['session_id'] ?? 0);
+        if (!$sessionId) { redirect('/learn/questlog'); }
+
+        $sesStmt = db()->prepare(
+            "SELECT s.*, ca.title AS adventure_title, ca.id AS adventure_id
+             FROM sessions s
+             JOIN custom_adventures ca ON s.custom_adventure_id = ca.id
+             WHERE s.id=? AND s.user_id=? AND s.status='active'"
+        );
+        $sesStmt->execute([$sessionId, $userId]);
+        $session = $sesStmt->fetch();
+        if (!$session) { redirect('/learn/questlog'); }
+
+        $items    = self::getSessionItems($sessionId);
+        $progress = self::getSessionProgress($sessionId);
+        $theme    = self::loadTheme($_SESSION['theme'] ?? 'minecraft');
+
+        // Fake $unit so session.php renders correctly
+        $unit = [
+            'id'         => 0,
+            'format'     => 'word',
+            'word_count' => count($items),
+            'difficulty' => 1,
+            'quest_title'=> $session['adventure_title'],
+            'biome_name' => 'Zusätzliches Abenteuer',
+            'theme_biome'=> 'forest',
+            'category'   => 'custom',
+            'is_adventure'=> true,
+        ];
 
         require __DIR__ . '/../Views/learn/session.php';
     }
@@ -215,7 +275,7 @@ class SessionController
 
         // Item validieren — muss zur aktiven Session des Users gehören
         $stmt = db()->prepare("
-            SELECT si.id, si.format,
+            SELECT si.id, si.format, si.custom_text,
                    w.word, w.primary_category,
                    si.tts_replays, si.tts_slow_replays,
                    s.sentence
@@ -235,9 +295,11 @@ class SessionController
             exit;
         }
 
-        // Text bestimmen
+        // Text bestimmen (custom_text hat Vorrang für Adventure-Items)
         $text = '';
-        if ($item['format'] === 'sentence' && $item['sentence']) {
+        if ($item['custom_text']) {
+            $text = $item['custom_text'];
+        } elseif ($item['format'] === 'sentence' && $item['sentence']) {
             $text = $item['sentence'];
         } elseif ($item['word']) {
             $text = $item['word'];
@@ -325,7 +387,7 @@ class SessionController
         // Item validieren
         $stmt = db()->prepare("
             SELECT si.id, si.final_correct, si.second_try_allowed,
-                   si.format, si.session_id,
+                   si.format, si.session_id, si.custom_text,
                    w.word, w.primary_category,
                    s.sentence
             FROM session_items si
@@ -349,9 +411,11 @@ class SessionController
             exit;
         }
 
-        // Korrekte Antwort bestimmen
+        // Korrekte Antwort bestimmen (custom_text hat Vorrang für Adventure-Items)
         $correct = '';
-        if (in_array($item['format'], ['sentence', 'mini_diktat']) && $item['sentence']) {
+        if ($item['custom_text']) {
+            $correct = $item['custom_text'];
+        } elseif (in_array($item['format'], ['sentence', 'mini_diktat']) && $item['sentence']) {
             $correct = $item['sentence'];
         } elseif ($item['word']) {
             $correct = $item['word'];
@@ -455,7 +519,58 @@ class SessionController
         $userId    = (int)$_SESSION['user_id'];
         $sessionId = (int)($data['session_id'] ?? 0);
 
-        // Session validieren
+        // Session validieren — Adventure-Sessions haben custom_adventure_id statt plan_unit_id
+        $sesBase = db()->prepare(
+            "SELECT * FROM sessions WHERE id=? AND user_id=? AND status='active'"
+        );
+        $sesBase->execute([$sessionId, $userId]);
+        $sesRow = $sesBase->fetch();
+
+        if (!$sesRow) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Session nicht gefunden']);
+            exit;
+        }
+
+        // Adventure-Sessions: Plan-Advancement überspringen, nur Adventure abschließen
+        if ($sesRow['custom_adventure_id']) {
+            $statsStmt = db()->prepare(
+                "SELECT SUM(CASE WHEN final_correct=1 THEN 1 ELSE 0 END) AS correct,
+                        SUM(CASE WHEN final_correct=0 THEN 1 ELSE 0 END) AS wrong,
+                        COUNT(*) AS total
+                 FROM session_items WHERE session_id=?"
+            );
+            $statsStmt->execute([$sessionId]);
+            $stats = $statsStmt->fetch();
+
+            $adb = db();
+            $adb->beginTransaction();
+            try {
+                $adb->prepare(
+                    "UPDATE sessions
+                     SET status='completed', completed_at=CURRENT_TIMESTAMP,
+                         duration_seconds = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER),
+                         correct_first_try=?, wrong_total=?
+                     WHERE id=?"
+                )->execute([(int)$stats['correct'], (int)$stats['wrong'], $sessionId]);
+                $adb->prepare(
+                    "UPDATE custom_adventures SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE id=?"
+                )->execute([$sesRow['custom_adventure_id']]);
+                $adb->commit();
+                echo json_encode([
+                    'success' => true, 'quest_completed' => false, 'biome_completed' => false,
+                    'plan_completed' => false, 'adventure_done' => true,
+                    'correct' => (int)$stats['correct'], 'wrong' => (int)$stats['wrong'],
+                ]);
+            } catch (\Throwable $e) {
+                $adb->rollBack();
+                error_log('completeSession adventure — ' . $e->getMessage());
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+            exit;
+        }
+
+        // Normale Session: plan_unit JOIN
         $sesStmt = db()->prepare(
             "SELECT s.*, pu.id AS unit_id, pu.quest_id,
                     q.biome_id, pb.plan_id
@@ -816,7 +931,7 @@ class SessionController
         $stmt = db()->prepare("
             SELECT si.id, si.format, si.order_index,
                    si.final_correct, si.second_try_allowed,
-                   si.tts_replays,
+                   si.tts_replays, si.custom_text,
                    w.word, w.primary_category,
                    s.sentence
             FROM session_items si
@@ -850,7 +965,7 @@ class SessionController
     private static function getNextUnansweredItem(int $sessionId): ?array
     {
         $stmt = db()->prepare(
-            "SELECT si.id, si.format, si.order_index,
+            "SELECT si.id, si.format, si.order_index, si.custom_text,
                     w.word, w.primary_category,
                     s.sentence
              FROM session_items si

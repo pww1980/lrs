@@ -172,6 +172,97 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     .badge-locked    { color: #bbb;    font-size: 1.1rem; }
     .badge-skipped   { color: #ff9800; font-size: 0.75rem; font-style: italic; }
 
+    /* ── Achievements ── */
+    .achievements-section {
+      margin-bottom: 1.25rem;
+    }
+    .achievements-label {
+      font-size: .78rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .5rem;
+      text-align: center;
+    }
+    .achievements-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      justify-content: center;
+    }
+    .ach-badge {
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: .35rem .65rem;
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .82rem;
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      cursor: default;
+      position: relative;
+    }
+    .ach-badge.new {
+      border-color: #ffd700;
+      background: #fffde7;
+      animation: ach-glow 1.5s ease-in-out 3;
+    }
+    @keyframes ach-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+      50%      { box-shadow: 0 0 10px 3px rgba(255,215,0,.6); }
+    }
+    .ach-badge .ach-icon { font-size: 1.1rem; }
+    .ach-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #212121;
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 400;
+      border-radius: 6px;
+      padding: .35rem .6rem;
+      white-space: nowrap;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .ach-badge:hover .ach-tooltip { display: block; }
+
+    /* ── Next Achievement ── */
+    .next-ach-card {
+      background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: .85rem 1.1rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+    }
+    .next-ach-icon { font-size: 2rem; flex-shrink: 0; filter: grayscale(60%) brightness(.7); }
+    .next-ach-info { flex: 1; min-width: 0; }
+    .next-ach-title { font-size: .72rem; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+    .next-ach-name  { font-size: 1rem; font-weight: 700; margin: .1rem 0 .3rem; }
+    .progress-bar-wrap {
+      background: rgba(255,255,255,.15);
+      border-radius: 20px;
+      height: 8px;
+      overflow: hidden;
+      margin: .3rem 0 .25rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 20px;
+      background: linear-gradient(90deg, #ffd700, #ffb300);
+      transition: width .6s ease;
+    }
+    .next-ach-sub { font-size: .75rem; opacity: .75; }
+
     /* ── Adventure Banner ── */
     .adventure-banner {
       background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%);
@@ -347,7 +438,49 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
         <span class="icon">✅</span>
         <?= $completedQuests ?>/<?= $totalQuests ?> Quests
       </div>
+      <?php if ($totalCorrectWords > 0): ?>
+      <div class="stat-chip">
+        <span class="icon">⭐</span>
+        <?= $totalCorrectWords ?> Wörter
+      </div>
+      <?php endif; ?>
     </div>
+
+    <!-- Nächstes Achievement -->
+    <?php if (!empty($nextAchievements)): $nxt = $nextAchievements[0]; ?>
+    <div class="next-ach-card">
+      <div class="next-ach-icon"><?= $nxt['icon'] ?></div>
+      <div class="next-ach-info">
+        <div class="next-ach-title">Nächstes Ziel</div>
+        <div class="next-ach-name"><?= htmlspecialchars($nxt['title']) ?></div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:<?= $nxt['pct'] ?>%"></div>
+        </div>
+        <div class="next-ach-sub">
+          <?= $nxt['current_value'] ?> / <?= (int)$nxt['trigger_value'] ?> <?= $nxt['label'] ?>
+          &nbsp;·&nbsp; noch <?= $nxt['left'] ?> <?= $nxt['label'] ?>!
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Freigeschaltete Achievements -->
+    <?php if (!empty($unlockedAchievements)): ?>
+    <div class="achievements-section">
+      <div class="achievements-label">🏆 Deine Auszeichnungen</div>
+      <div class="achievements-row">
+        <?php foreach ($unlockedAchievements as $ach):
+          $isNew = !$ach['seen_by_user']; // war noch ungesehen vor diesem Laden
+        ?>
+          <div class="ach-badge <?= $isNew ? 'new' : '' ?>" title="">
+            <span class="ach-icon"><?= $ach['icon'] ?></span>
+            <?= htmlspecialchars($ach['title']) ?>
+            <span class="ach-tooltip"><?= htmlspecialchars($ach['description']) ?></span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <div class="map-title">
       <h2>Deine Abenteuermap</h2>

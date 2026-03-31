@@ -167,6 +167,12 @@ match (true) {
     $uri === '/setup/generate-words/done' && $method === 'POST'
         => (function () {
             \App\Helpers\Auth::requireRole('admin', 'superadmin');
+            $data = json_decode(file_get_contents('php://input'), true) ?? [];
+            if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+                http_response_code(403);
+                echo json_encode(['error' => 'CSRF-Fehler']);
+                exit;
+            }
             unset($_SESSION['word_gen_child_id'], $_SESSION['word_gen_child_name'], $_SESSION['word_gen_start_test']);
             header('Content-Type: application/json');
             echo json_encode(['ok' => true]);

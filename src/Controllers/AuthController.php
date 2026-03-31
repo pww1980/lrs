@@ -27,6 +27,12 @@ class AuthController
             redirect('/login');
         }
 
+        // CSRF-Schutz für Login-Formular
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+            $_SESSION['login_error'] = 'Ungültige Anfrage. Bitte Seite neu laden.';
+            redirect('/login');
+        }
+
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 

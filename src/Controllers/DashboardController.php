@@ -46,30 +46,42 @@ class DashboardController
     public static function approvePlan(): void
     {
         Auth::requireRole('admin', 'superadmin');
+        ini_set('display_errors', '0');
+        ob_start();
         header('Content-Type: application/json');
 
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            ob_end_clean();
             http_response_code(403);
             echo json_encode(['error' => 'CSRF-Fehler']);
             exit;
         }
 
-        $adminId = (int)$_SESSION['user_id'];
-        $planId  = (int)($data['plan_id'] ?? 0);
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $planId       = (int)($data['plan_id'] ?? 0);
 
-        // Plan validieren — muss Kind dieses Admins gehören
-        $stmt = db()->prepare("
-            SELECT lp.id, lp.user_id
-            FROM learning_plans lp
-            JOIN child_admins ca ON lp.user_id = ca.child_id
-            WHERE lp.id = ? AND ca.admin_id = ? AND lp.status = 'draft'
-        ");
-        $stmt->execute([$planId, $adminId]);
+        // Plan validieren — Superadmin sieht alle, Admin nur eigene Kinder
+        if ($isSuperadmin) {
+            $stmt = db()->prepare(
+                "SELECT id, user_id FROM learning_plans WHERE id=? AND status='draft'"
+            );
+            $stmt->execute([$planId]);
+        } else {
+            $stmt = db()->prepare("
+                SELECT lp.id, lp.user_id
+                FROM learning_plans lp
+                JOIN child_admins ca ON lp.user_id = ca.child_id
+                WHERE lp.id = ? AND ca.admin_id = ? AND lp.status = 'draft'
+            ");
+            $stmt->execute([$planId, $adminId]);
+        }
         $plan = $stmt->fetch();
 
         if (!$plan) {
+            ob_end_clean();
             http_response_code(404);
             echo json_encode(['error' => 'Plan nicht gefunden oder bereits aktiv']);
             exit;
@@ -132,8 +144,10 @@ class DashboardController
             }
 
             $db->commit();
+            ob_end_clean();
             echo json_encode(['success' => true, 'message' => 'Plan aktiviert!']);
         } catch (\Throwable $e) {
+            ob_end_clean();
             $db->rollBack();
             error_log('DashboardController::approvePlan — ' . $e->getMessage());
             http_response_code(500);
@@ -149,34 +163,52 @@ class DashboardController
     public static function toggleQuest(): void
     {
         Auth::requireRole('admin', 'superadmin');
+        ini_set('display_errors', '0');
+        ob_start();
         header('Content-Type: application/json');
 
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         if (!hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'] ?? '')) {
+            ob_end_clean();
             http_response_code(403);
             echo json_encode(['error' => 'CSRF-Fehler']);
             exit;
         }
 
-        $adminId = (int)$_SESSION['user_id'];
-        $questId = (int)($data['quest_id'] ?? 0);
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $questId      = (int)($data['quest_id'] ?? 0);
 
-        // Quest validieren — muss zu einem Kind dieses Admins gehören
-        $stmt = db()->prepare("
-            SELECT q.id, q.status, q.biome_id,
-                   tr.severity, tr.strategy_level, q.category
-            FROM quests q
-            JOIN plan_biomes pb     ON q.biome_id   = pb.id
-            JOIN learning_plans lp  ON pb.plan_id   = lp.id
-            JOIN child_admins ca    ON lp.user_id   = ca.child_id
-            LEFT JOIN test_results tr ON (tr.test_id = lp.test_id AND tr.category = q.category)
-            WHERE q.id = ? AND ca.admin_id = ? AND lp.status = 'draft'
-        ");
-        $stmt->execute([$questId, $adminId]);
+        // Quest validieren — Superadmin sieht alle, Admin nur eigene Kinder
+        if ($isSuperadmin) {
+            $stmt = db()->prepare("
+                SELECT q.id, q.status, q.biome_id, q.category,
+                       tr.severity, tr.strategy_level
+                FROM quests q
+                JOIN plan_biomes pb    ON q.biome_id  = pb.id
+                JOIN learning_plans lp ON pb.plan_id  = lp.id
+                LEFT JOIN test_results tr ON (tr.test_id = lp.test_id AND tr.category = q.category)
+                WHERE q.id = ? AND lp.status = 'draft'
+            ");
+            $stmt->execute([$questId]);
+        } else {
+            $stmt = db()->prepare("
+                SELECT q.id, q.status, q.biome_id, q.category,
+                       tr.severity, tr.strategy_level
+                FROM quests q
+                JOIN plan_biomes pb     ON q.biome_id   = pb.id
+                JOIN learning_plans lp  ON pb.plan_id   = lp.id
+                JOIN child_admins ca    ON lp.user_id   = ca.child_id
+                LEFT JOIN test_results tr ON (tr.test_id = lp.test_id AND tr.category = q.category)
+                WHERE q.id = ? AND ca.admin_id = ? AND lp.status = 'draft'
+            ");
+            $stmt->execute([$questId, $adminId]);
+        }
         $quest = $stmt->fetch();
 
         if (!$quest) {
+            ob_end_clean();
             http_response_code(404);
             echo json_encode(['error' => 'Quest nicht gefunden']);
             exit;
@@ -214,6 +246,7 @@ class DashboardController
             $newStatus = 'skipped';
         }
 
+        ob_end_clean();
         echo json_encode(['success' => true, 'new_status' => $newStatus]);
         exit;
     }
@@ -251,10 +284,6 @@ class DashboardController
             // Auswertungs-Status ermitteln
             $child['analysis_status'] = 'none'; // none | pending | done
             if ($child['latest_test'] && $child['latest_test']['status'] === 'completed') {
-                $hasResults = (int)db()->prepare(
-                    "SELECT COUNT(*) FROM test_results WHERE test_id=?"
-                )->execute([$child['latest_test']['id']]) && true;
-
                 $resStmt = db()->prepare("SELECT COUNT(*) FROM test_results WHERE test_id=?");
                 $resStmt->execute([$child['latest_test']['id']]);
                 $child['analysis_status'] = ((int)$resStmt->fetchColumn() > 0) ? 'done' : 'pending';

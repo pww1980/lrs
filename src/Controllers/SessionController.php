@@ -70,8 +70,8 @@ class SessionController
 
                 $qStmt = db()->prepare(
                     "SELECT q.id, q.category, q.title, q.description,
-                            q.order_index, q.status, q.quest_id,
-                            COUNT(pu.id)                                         AS total_units,
+                            q.order_index, q.status,
+                            COUNT(pu.id)                                           AS total_units,
                             SUM(CASE WHEN pu.status='completed' THEN 1 ELSE 0 END) AS done_units,
                             SUM(CASE WHEN pu.status='pending'   THEN 1 ELSE 0 END) AS pending_units
                      FROM quests q
@@ -107,11 +107,11 @@ class SessionController
 
         // Streak + Statistiken
         $streakDays    = self::getStreakDays($userId);
-        $totalSessions = (int)db()->prepare(
+        $sessStmt = db()->prepare(
             "SELECT COUNT(*) FROM sessions WHERE user_id=? AND status='completed'"
-        )->execute([$userId]) && 0 ?: (int)db()->query(
-            "SELECT COUNT(*) FROM sessions WHERE user_id={$userId} AND status='completed'"
-        )->fetchColumn();
+        );
+        $sessStmt->execute([$userId]);
+        $totalSessions = (int)$sessStmt->fetchColumn();
         $childName     = $_SESSION['display_name'] ?? 'Kind';
 
         require __DIR__ . '/../Views/learn/questlog.php';

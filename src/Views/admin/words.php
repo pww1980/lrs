@@ -49,6 +49,7 @@
   <a href="<?= url('/admin/dashboard') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">← Dashboard</a>
   <a href="<?= url('/admin/words/generate' . ($childId ? '?child_id=' . $childId : '')) ?>"
      class="btn btn-sm btn-secondary" style="margin-right:.35rem">🔄 Generieren</a>
+  <a href="<?= url('/admin/settings') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">⚙️ Einstellungen</a>
   <a href="<?= url('/logout') ?>" class="btn btn-sm">Abmelden</a>
 </nav>
 

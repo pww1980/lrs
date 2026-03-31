@@ -383,6 +383,10 @@ match (true) {
     $uri === '/admin/sessions/detail' && $method === 'GET'
         => \App\Controllers\DashboardController::sessionDetail(),
 
+    // Plan zurücksetzen (AJAX POST)
+    $uri === '/admin/plan/reset' && $method === 'POST'
+        => \App\Controllers\DashboardController::resetPlan(),
+
     // Plan bestätigen (AJAX POST)
     $uri === '/admin/plan/approve' && $method === 'POST'
         => \App\Controllers\DashboardController::approvePlan(),

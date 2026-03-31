@@ -114,6 +114,72 @@ class SessionController
         $totalSessions = (int)$sessStmt->fetchColumn();
         $childName     = $_SESSION['display_name'] ?? 'Kind';
 
+        // Achievements laden
+        \App\Services\AchievementService::ensureDefinitionsSeeded();
+
+        $achStmt = db()->prepare(
+            "SELECT ad.code, ad.title, ad.icon, ad.description, ad.category, ad.is_secret,
+                    ua.unlocked_at, ua.seen_by_user
+             FROM user_achievements ua
+             JOIN achievement_definitions ad ON ua.achievement_id = ad.id
+             WHERE ua.user_id = ?
+             ORDER BY ua.unlocked_at DESC"
+        );
+        $achStmt->execute([$userId]);
+        $unlockedAchievements = $achStmt->fetchAll();
+
+        // Neu freigeschaltete (unseen) markieren — nach Laden, damit UI sie hervorheben kann
+        $newAchievements = array_filter($unlockedAchievements, fn($a) => !$a['seen_by_user']);
+        db()->prepare(
+            "UPDATE user_achievements SET seen_by_user=1 WHERE user_id=? AND seen_by_user=0"
+        )->execute([$userId]);
+
+        // Richtig geschriebene Wörter gesamt
+        $wStmt = db()->prepare(
+            "SELECT COUNT(*) FROM session_items si
+             JOIN sessions s ON si.session_id = s.id
+             WHERE s.user_id=? AND si.final_correct=1"
+        );
+        $wStmt->execute([$userId]);
+        $totalCorrectWords = (int)$wStmt->fetchColumn();
+
+        // Nächste erreichbare Achievements berechnen (sichtbare, noch nicht freigeschaltet)
+        $trackable = [
+            'words_correct'      => $totalCorrectWords,
+            'sessions_completed' => $totalSessions,
+            'streak_days'        => $streakDays,
+        ];
+        $nextAchievements = [];
+        foreach ($trackable as $triggerType => $currentValue) {
+            $nStmt = db()->prepare(
+                "SELECT ad.* FROM achievement_definitions ad
+                 WHERE ad.active=1 AND ad.trigger_type=? AND ad.is_secret=0
+                   AND CAST(ad.trigger_value AS INTEGER) > ?
+                   AND NOT EXISTS (
+                     SELECT 1 FROM user_achievements ua
+                     WHERE ua.user_id=? AND ua.achievement_id=ad.id
+                   )
+                 ORDER BY CAST(ad.trigger_value AS INTEGER) ASC
+                 LIMIT 1"
+            );
+            $nStmt->execute([$triggerType, $currentValue, $userId]);
+            $nxt = $nStmt->fetch();
+            if ($nxt) {
+                $nxt['current_value'] = $currentValue;
+                $nxt['pct']  = min(99, (int)round($currentValue / max(1, $nxt['trigger_value']) * 100));
+                $nxt['left'] = (int)$nxt['trigger_value'] - $currentValue;
+                $nxt['label'] = match($triggerType) {
+                    'words_correct'      => 'Wörter richtig',
+                    'sessions_completed' => 'Einheiten',
+                    'streak_days'        => 'Tage Streak',
+                    default              => '',
+                };
+                $nextAchievements[] = $nxt;
+            }
+        }
+        // Nächsterreichbare zuerst (höchster Fortschritt)
+        usort($nextAchievements, fn($a, $b) => $b['pct'] - $a['pct']);
+
         // Pending/Active Adventures laden
         $advStmt = db()->prepare(
             "SELECT ca.id, ca.title, ca.scheduled_date, ca.school_date, ca.status,

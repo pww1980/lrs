@@ -14,6 +14,9 @@
   var sessionId   = data.sessionId;
   var format      = data.format;
   var isAdventure = !!data.is_adventure;
+  var txtQuestDone = data.txt_quest_done || 'Quest abgeschlossen!';
+  var txtCorrect   = data.txt_correct    || 'Richtig! ✅';
+  var txtWrong     = data.txt_wrong      || 'Noch einmal versuchen!';
 
   // ── DOM refs ──────────────────────────────────────────────────────────
 
@@ -459,11 +462,11 @@
       fetchSessionFeedback();
 
       if (result.quest_completed) {
-        questBanner.textContent    = '🏆 Quest abgeschlossen!';
+        questBanner.textContent    = '🏆 ' + txtQuestDone;
         questBanner.style.display  = 'block';
       }
       if (result.biome_completed) {
-        questBanner.textContent    = '🌟 Biom abgeschlossen! Neues Gebiet freigeschaltet!';
+        questBanner.textContent    = '🌟 Gebiet abgeschlossen! Neues Gebiet freigeschaltet!';
         questBanner.style.display  = 'block';
       }
     }

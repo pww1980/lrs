@@ -264,8 +264,16 @@ Verfügbare Theme-Biome (block_index → Lernblock-Reihenfolge): {$biomesJson}
 Fehlerprofil (nach analyzeTest):
 {$resultsJson}
 
-Aufgabe:
-- Erstelle einen Lernplan mit Biomen (= Fehlerblöcke A/B/C/D) und Quests (= Kategorien A1-D4).
+WICHTIG — Kategorie-Codes (exakt so verwenden, keine anderen Codes!):
+Block A: A1=Auslautverhärtung, A2=Vokallänge, A3=Konsonantenhäufungen
+Block B: B1=Doppelkonsonanten, B2=ck/tz, B3=ie/ih/i, B4=Dehnungs-h, B5=sp/st
+Block C: C1=ä vs e, C2=äu vs eu, C3=dass/das
+Block D: D1=Konkrete Nomen, D2=Abstrakte Nomen, D3=Nominalisierungen, D4=Satzanfang
+
+Regeln:
+- Jedes Biom hat "block": "A", "B", "C" oder "D" (Großbuchstabe).
+- Jede Quest hat "category": exakt den Code aus obiger Liste (z.B. "B1", "B3").
+- Der category-Code MUSS zum Block des übergeordneten Bioms passen (Block B → B1-B5).
 - Priorisiere nach Schweregrad: severe → moderate → mild → none.
 - Pro Quest: 3-5 Übungseinheiten bei severe, 2-3 bei moderate, 1-2 bei mild.
 - Quests mit severity=none können übersprungen (skipped) werden.

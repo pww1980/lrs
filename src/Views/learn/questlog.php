@@ -13,6 +13,29 @@
 $pageTitle = 'Abenteuermap — ' . APP_NAME;
 $themeName = $_SESSION['theme'] ?? 'minecraft';
 $csrfToken = \App\Helpers\Auth::csrfToken();
+
+// Theme-Farben + Labels
+$tc = $theme['colors']  ?? [];
+$tl = $theme['labels']  ?? [];
+$tf = $theme['flavor_texts'] ?? [];
+$themeColorPrimary   = $tc['primary']    ?? '#2d5016';
+$themeColorPrimaryDk = $tc['primary_dk'] ?? '#1a3a08';
+$themeColorAccent    = $tc['accent']     ?? '#4a9220';
+$themeLabelQuest    = $tl['quest']    ?? 'Quest';
+$themeLabelBiome    = $tl['biome']    ?? 'Biom';
+$themeLabelPoints   = $tl['points']   ?? 'Punkte';
+$themeLabelAch      = $tl['achievement'] ?? 'Auszeichnung';
+$themeIcon          = $theme['icon']  ?? '⛏️';
+$themeName_display  = $theme['name']  ?? 'Minecraft';
+
+// Biom-Farben-Map aus theme.json (id → [color_from, color_to])
+$biomeColorMap = [];
+foreach ($theme['biomes'] ?? [] as $tb) {
+    $biomeColorMap[$tb['id']] = [
+        'from' => $tb['color_from'] ?? '#555',
+        'to'   => $tb['color_to']   ?? '#777',
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -24,13 +47,13 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
   <style>
     /* ── Questlog Layout ── */
     .questlog-header {
-      background: linear-gradient(135deg, #2d5016 0%, #3d7a1a 50%, #4a9220 100%);
+      background: linear-gradient(135deg, <?= $themeColorPrimaryDk ?> 0%, <?= $themeColorPrimary ?> 60%, <?= $themeColorAccent ?> 100%);
       color: #fff;
       padding: 1.25rem 1.5rem;
       display: flex;
       align-items: center;
       gap: 1rem;
-      border-bottom: 3px solid #1a3a08;
+      border-bottom: 3px solid <?= $themeColorPrimaryDk ?>;
     }
     .questlog-header .logo { font-size: 2rem; }
     .questlog-header h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
@@ -77,10 +100,6 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
       color: #fff;
       position: relative;
     }
-    .biome-header.forest  { background: linear-gradient(135deg, #2d6a1f, #4a9228); }
-    .biome-header.desert  { background: linear-gradient(135deg, #8a6914, #c4960a); }
-    .biome-header.nether  { background: linear-gradient(135deg, #8a1414, #c43a0a); }
-    .biome-header.the_end { background: linear-gradient(135deg, #2a1a5e, #5a2d9a); }
     .biome-header.locked-bg { background: linear-gradient(135deg, #555, #777); }
 
     .biome-icon { font-size: 2rem; }
@@ -171,6 +190,97 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     .badge-completed { color: #4caf50; font-size: 1.3rem; }
     .badge-locked    { color: #bbb;    font-size: 1.1rem; }
     .badge-skipped   { color: #ff9800; font-size: 0.75rem; font-style: italic; }
+
+    /* ── Achievements ── */
+    .achievements-section {
+      margin-bottom: 1.25rem;
+    }
+    .achievements-label {
+      font-size: .78rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .5rem;
+      text-align: center;
+    }
+    .achievements-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      justify-content: center;
+    }
+    .ach-badge {
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: .35rem .65rem;
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .82rem;
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      cursor: default;
+      position: relative;
+    }
+    .ach-badge.new {
+      border-color: #ffd700;
+      background: #fffde7;
+      animation: ach-glow 1.5s ease-in-out 3;
+    }
+    @keyframes ach-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+      50%      { box-shadow: 0 0 10px 3px rgba(255,215,0,.6); }
+    }
+    .ach-badge .ach-icon { font-size: 1.1rem; }
+    .ach-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #212121;
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 400;
+      border-radius: 6px;
+      padding: .35rem .6rem;
+      white-space: nowrap;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .ach-badge:hover .ach-tooltip { display: block; }
+
+    /* ── Next Achievement ── */
+    .next-ach-card {
+      background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: .85rem 1.1rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+    }
+    .next-ach-icon { font-size: 2rem; flex-shrink: 0; filter: grayscale(60%) brightness(.7); }
+    .next-ach-info { flex: 1; min-width: 0; }
+    .next-ach-title { font-size: .72rem; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+    .next-ach-name  { font-size: 1rem; font-weight: 700; margin: .1rem 0 .3rem; }
+    .progress-bar-wrap {
+      background: rgba(255,255,255,.15);
+      border-radius: 20px;
+      height: 8px;
+      overflow: hidden;
+      margin: .3rem 0 .25rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 20px;
+      background: linear-gradient(90deg, #ffd700, #ffb300);
+      transition: width .6s ease;
+    }
+    .next-ach-sub { font-size: .75rem; opacity: .75; }
 
     /* ── Adventure Banner ── */
     .adventure-banner {
@@ -264,10 +374,10 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
 <body class="theme-<?= htmlspecialchars($themeName) ?>">
 
 <header class="questlog-header">
-  <span class="logo">⛏️</span>
+  <span class="logo"><?= $themeIcon ?></span>
   <div>
     <h1>Abenteuermap</h1>
-    <div class="subtitle"><?= htmlspecialchars($childName) ?>s Lernreise</div>
+    <div class="subtitle"><?= htmlspecialchars($childName) ?>s Lernreise · <?= htmlspecialchars($themeName_display) ?></div>
   </div>
   <div class="header-right">
     <a href="<?= url('/logout') ?>">Abmelden</a>
@@ -347,7 +457,49 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
         <span class="icon">✅</span>
         <?= $completedQuests ?>/<?= $totalQuests ?> Quests
       </div>
+      <?php if ($totalCorrectWords > 0): ?>
+      <div class="stat-chip">
+        <span class="icon">⭐</span>
+        <?= $totalCorrectWords ?> Wörter
+      </div>
+      <?php endif; ?>
     </div>
+
+    <!-- Nächstes Achievement -->
+    <?php if (!empty($nextAchievements)): $nxt = $nextAchievements[0]; ?>
+    <div class="next-ach-card">
+      <div class="next-ach-icon"><?= $nxt['icon'] ?></div>
+      <div class="next-ach-info">
+        <div class="next-ach-title">Nächstes Ziel</div>
+        <div class="next-ach-name"><?= htmlspecialchars($nxt['title']) ?></div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:<?= $nxt['pct'] ?>%"></div>
+        </div>
+        <div class="next-ach-sub">
+          <?= $nxt['current_value'] ?> / <?= (int)$nxt['trigger_value'] ?> <?= $nxt['label'] ?>
+          &nbsp;·&nbsp; noch <?= $nxt['left'] ?> <?= $nxt['label'] ?>!
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Freigeschaltete Achievements -->
+    <?php if (!empty($unlockedAchievements)): ?>
+    <div class="achievements-section">
+      <div class="achievements-label">🏆 Deine <?= htmlspecialchars($themeLabelAch) ?>en</div>
+      <div class="achievements-row">
+        <?php foreach ($unlockedAchievements as $ach):
+          $isNew = !$ach['seen_by_user']; // war noch ungesehen vor diesem Laden
+        ?>
+          <div class="ach-badge <?= $isNew ? 'new' : '' ?>" title="">
+            <span class="ach-icon"><?= $ach['icon'] ?></span>
+            <?= htmlspecialchars($ach['title']) ?>
+            <span class="ach-tooltip"><?= htmlspecialchars($ach['description']) ?></span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <div class="map-title">
       <h2>Deine Abenteuermap</h2>
@@ -355,15 +507,16 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     </div>
 
     <?php foreach ($biomes as $biomeIndex => $biome):
-      $biomeId = $biome['theme_biome'] ?? 'forest';
+      $biomeId  = $biome['theme_biome'] ?? 'forest';
       $isLocked    = $biome['status'] === 'locked';
       $isActive    = $biome['status'] === 'active';
       $isCompleted = $biome['status'] === 'completed';
 
-      // Biome header class
-      $headerClass = in_array($biomeId, ['forest','desert','nether','the_end'])
-                    ? $biomeId : 'locked-bg';
-      if ($isLocked) $headerClass = 'locked-bg';
+      // Biom-Farbe aus theme.json, Fallback grau wenn gesperrt
+      $bColors = $biomeColorMap[$biomeId] ?? ['from' => '#555', 'to' => '#777'];
+      $biomeHeaderStyle = $isLocked
+        ? 'background:linear-gradient(135deg,#555,#777)'
+        : 'background:linear-gradient(135deg,' . $bColors['from'] . ',' . $bColors['to'] . ')';
 
       $statusLabel = match($biome['status']) {
         'active'    => 'Aktiv',
@@ -377,11 +530,11 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
       <?php endif; ?>
 
       <div class="biome-card <?= $isLocked ? 'locked' : '' ?>">
-        <div class="biome-header <?= htmlspecialchars($headerClass) ?>">
+        <div class="biome-header" style="<?= $biomeHeaderStyle ?>">
           <span class="biome-icon"><?= htmlspecialchars($biome['icon'] ?? '🌍') ?></span>
           <div>
             <div class="biome-name"><?= htmlspecialchars($biome['name']) ?></div>
-            <div class="biome-block">Block <?= htmlspecialchars($biome['block']) ?></div>
+            <div class="biome-block"><?= htmlspecialchars($themeLabelBiome) ?> · Block <?= htmlspecialchars($biome['block']) ?></div>
           </div>
           <span class="biome-status-badge <?= htmlspecialchars($biome['status']) ?>">
             <?= htmlspecialchars($statusLabel) ?>
@@ -393,7 +546,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
 
         <div class="quest-list">
           <?php if (empty($biome['quests'])): ?>
-            <p style="color:#999;font-size:0.85rem;padding:0.5rem;">Keine Quests</p>
+            <p style="color:#999;font-size:0.85rem;padding:0.5rem;">Keine <?= htmlspecialchars($themeLabelQuest) ?>s</p>
           <?php endif; ?>
 
           <?php foreach ($biome['quests'] as $quest):

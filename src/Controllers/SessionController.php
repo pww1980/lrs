@@ -654,8 +654,9 @@ class SessionController
                          correct_first_try=?, wrong_total=?
                      WHERE id=?"
                 )->execute([(int)$stats['correct'], (int)$stats['wrong'], $sessionId]);
+                // Adventure auf 'pending' zurücksetzen → kann sofort erneut gespielt werden
                 $adb->prepare(
-                    "UPDATE custom_adventures SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE id=?"
+                    "UPDATE custom_adventures SET status='pending', completed_at=CURRENT_TIMESTAMP WHERE id=?"
                 )->execute([$sesRow['custom_adventure_id']]);
                 $adb->commit();
                 echo json_encode([

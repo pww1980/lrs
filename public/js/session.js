@@ -92,6 +92,14 @@
     submitBtn.addEventListener('click', onSubmit);
     nextBtn.addEventListener('click', onNext);
     if (mapBtn) mapBtn.addEventListener('click', function () { window.location.href = '/index.php?_r=%2Flearn%2Fquestlog'; });
+
+    // Enter in der Feedback-Phase → Weiter / Abschließen
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && state === 'feedback') {
+        e.preventDefault();
+        onNext();
+      }
+    });
   }
 
   // ── Item laden ────────────────────────────────────────────────────────

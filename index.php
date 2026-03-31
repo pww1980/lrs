@@ -299,6 +299,12 @@ match (true) {
     $uri === '/admin/words' && $method === 'GET'
         => \App\Controllers\WordController::list(),
 
+    $uri === '/admin/words/generate' && $method === 'GET'
+        => \App\Controllers\WordController::generatePage(),
+
+    $uri === '/admin/words/generate-batch' && $method === 'POST'
+        => \App\Controllers\WordController::generateBatch(),
+
     $uri === '/admin/words/toggle' && $method === 'POST'
         => \App\Controllers\WordController::toggle(),
 

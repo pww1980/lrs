@@ -76,12 +76,55 @@ class WordGeneratorService
     }
 
     /**
+     * Gibt alle Kategorien mit Lehrplan-Info + aktuellem Wortstand zurück.
+     * Für die Admin-Übersichtsseite.
+     *
+     * @return array<string, array{label:string, curriculum_text:string, examples_official:array,
+     *                             word_count:int, min_words:int, block:string}>
+     */
+    public function getCategoryStatus(): array
+    {
+        if (!$this->loadCurriculum()) {
+            return [];
+        }
+        $result = [];
+        foreach ($this->curriculum['categories'] ?? [] as $code => $data) {
+            $result[$code] = [
+                'label'            => $data['label']             ?? $code,
+                'curriculum_text'  => $data['curriculum_text']   ?? '',
+                'examples_official'=> $data['examples_official'] ?? [],
+                'word_count'       => $this->countExistingWords($code),
+                'min_words'        => self::MIN_WORDS,
+                'block'            => substr($code, 0, 1),
+            ];
+        }
+        return $result;
+    }
+
+    public function getCurriculumMeta(): array
+    {
+        if (!$this->loadCurriculum()) {
+            return [];
+        }
+        return [
+            'source'       => $this->curriculum['source']      ?? '',
+            'federal_state'=> $this->curriculum['federal_state'] ?? '',
+            'school_type'  => $this->curriculum['school_type']  ?? '',
+            'grades'       => $this->curriculum['grades']       ?? '',
+        ];
+    }
+
+    /**
      * Stellt sicher, dass für EINE Kategorie genug Wörter vorhanden sind.
      * Wird vom Batch-Endpoint (/setup/generate-words/batch) pro AJAX-Request aufgerufen.
      *
      * @return array{new_words: int, skipped: bool, error: string|null}
      */
-    public function ensureCategory(string $code): array
+    /**
+     * @param  bool  $force  true = ignoriert MIN_WORDS-Schwelle und generiert immer GENERATE_COUNT neue Wörter
+     * @return array{new_words: int, skipped: bool, error: string|null}
+     */
+    public function ensureCategory(string $code, bool $force = false): array
     {
         if (!$this->loadCurriculum()) {
             return ['new_words' => 0, 'skipped' => false, 'error' => 'Kein Lehrplan-JSON gefunden'];
@@ -93,12 +136,13 @@ class WordGeneratorService
         }
 
         $existing = $this->countExistingWords($code);
-        if ($existing >= self::MIN_WORDS) {
+        if (!$force && $existing >= self::MIN_WORDS) {
             return ['new_words' => 0, 'skipped' => true, 'error' => null];
         }
 
         $catData  = $categories[$code];
-        $needed   = max(1, self::GENERATE_COUNT - $existing);
+        // Bei force: immer GENERATE_COUNT neue generieren; bei normal: fehlende auffüllen
+        $needed   = $force ? self::GENERATE_COUNT : max(1, self::GENERATE_COUNT - $existing);
         $curriculumRef = sprintf('%s, %s', $this->curriculum['source'] ?? 'Lehrplan', $this->curriculum['grades'] ?? (string)$this->gradeLevel);
 
         try {

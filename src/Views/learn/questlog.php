@@ -172,6 +172,53 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     .badge-locked    { color: #bbb;    font-size: 1.1rem; }
     .badge-skipped   { color: #ff9800; font-size: 0.75rem; font-style: italic; }
 
+    /* ── Adventure Banner ── */
+    .adventure-banner {
+      background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 3px 12px rgba(0,0,0,.2);
+    }
+    .adventure-banner h3 {
+      margin: 0 0 .6rem 0;
+      font-size: 1rem;
+      opacity: .85;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .adventure-item {
+      background: rgba(255,255,255,.12);
+      border-radius: 8px;
+      padding: .65rem 1rem;
+      margin-bottom: .5rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .adventure-item:last-child { margin-bottom: 0; }
+    .adventure-item .adv-title { font-weight: 700; font-size: .95rem; flex: 1; }
+    .adventure-item .adv-meta  { font-size: .78rem; opacity: .8; }
+    .btn-adventure {
+      background: #fff;
+      color: #1a237e;
+      border: none;
+      padding: .45rem 1.1rem;
+      border-radius: 20px;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      flex-shrink: 0;
+      animation: adv-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes adv-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.5); }
+      50%       { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+    }
+
     /* ── No Plan State ── */
     .no-plan-box {
       text-align: center;
@@ -228,6 +275,40 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
 </header>
 
 <main class="map-container">
+
+  <?php if (!empty($pendingAdventures)): ?>
+    <div class="adventure-banner">
+      <h3>🗺️ Zusätzliche Abenteuer</h3>
+      <?php foreach ($pendingAdventures as $adv): ?>
+        <div class="adventure-item">
+          <div>
+            <div class="adv-title"><?= htmlspecialchars($adv['title']) ?></div>
+            <div class="adv-meta">
+              <?= (int)$adv['word_count'] ?> Wörter
+              <?php if ($adv['sentence_count'] > 0): ?>
+                · <?= (int)$adv['sentence_count'] ?> Sätze
+              <?php endif; ?>
+              <?php if ($adv['scheduled_date']): ?>
+                · Geplant: <?= date('d.m.Y', strtotime($adv['scheduled_date'])) ?>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php if ($adv['active_session_id']): ?>
+            <a href="<?= url('/learn/adventure?session_id=' . (int)$adv['active_session_id']) ?>"
+               class="btn-adventure">Weiter →</a>
+          <?php elseif ($adv['diktat_generated']): ?>
+            <form method="post" action="<?= url('/learn/adventure/start') ?>">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+              <input type="hidden" name="adventure_id" value="<?= (int)$adv['id'] ?>">
+              <button type="submit" class="btn-adventure">Starten! ⚔️</button>
+            </form>
+          <?php else: ?>
+            <span style="font-size:.78rem;opacity:.7">KI noch nicht generiert</span>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
 
   <?php if (!$activePlan): ?>
     <div class="no-plan-box">

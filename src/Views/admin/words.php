@@ -128,7 +128,8 @@
   </details>
 
   <!-- Filter -->
-  <form method="get" action="<?= url('/admin/words') ?>" class="words-filter">
+  <form method="get" action="/index.php" class="words-filter">
+    <input type="hidden" name="_r" value="/admin/words">
     <?php if ($childId): ?>
       <input type="hidden" name="child_id" value="<?= $childId ?>">
     <?php endif ?>

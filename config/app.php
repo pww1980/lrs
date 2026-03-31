@@ -90,8 +90,109 @@ function db(): PDO
 
         // FETCH_ASSOC auch für die neue Verbindung setzen
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+
+        // Schema-Migrationen für bestehende Installationen
+        runSchemaMigrations($pdo);
     }
     return $pdo;
+}
+
+/**
+ * Führt inkrementelle Schema-Migrationen durch.
+ * Wird bei jeder DB-Verbindung aufgerufen — muss idempotent sein.
+ */
+function runSchemaMigrations(PDO $pdo): void
+{
+    // ── 1. Neue Tabellen anlegen ──────────────────────────────────────────
+    $pdo->exec("CREATE TABLE IF NOT EXISTS custom_adventures (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        child_id     INTEGER NOT NULL REFERENCES users(id),
+        created_by   INTEGER NOT NULL REFERENCES users(id),
+        title        VARCHAR(200) NOT NULL DEFAULT 'Schulaufgabe',
+        school_date  DATE NULL,
+        scheduled_date DATE NOT NULL,
+        status       TEXT CHECK(status IN ('pending','active','completed','cancelled')) DEFAULT 'pending',
+        diktat_generated INTEGER DEFAULT 0,
+        ai_notes     TEXT NULL,
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed_at DATETIME NULL
+    )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS custom_adventure_words (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        adventure_id INTEGER NOT NULL REFERENCES custom_adventures(id) ON DELETE CASCADE,
+        word         VARCHAR(200) NOT NULL,
+        order_index  INTEGER NOT NULL DEFAULT 0
+    )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS custom_adventure_sentences (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        adventure_id INTEGER NOT NULL REFERENCES custom_adventures(id) ON DELETE CASCADE,
+        sentence     TEXT NOT NULL,
+        order_index  INTEGER NOT NULL DEFAULT 0
+    )");
+
+    // ── 2. Neue Spalten zu bestehenden Tabellen hinzufügen ────────────────
+    // ALTER TABLE ADD COLUMN ist in SQLite idempotent wenn wir vorher prüfen.
+    $existingCols = static function (PDO $pdo, string $table): array {
+        return array_column(
+            $pdo->query("PRAGMA table_info({$table})")->fetchAll(PDO::FETCH_ASSOC),
+            'name'
+        );
+    };
+
+    $sessionCols = $existingCols($pdo, 'sessions');
+    if (!in_array('custom_adventure_id', $sessionCols, true)) {
+        $pdo->exec("ALTER TABLE sessions ADD COLUMN custom_adventure_id INTEGER NULL REFERENCES custom_adventures(id)");
+    }
+
+    $itemCols = $existingCols($pdo, 'session_items');
+    if (!in_array('custom_text', $itemCols, true)) {
+        $pdo->exec("ALTER TABLE session_items ADD COLUMN custom_text VARCHAR(500) NULL");
+    }
+
+    // ── 3. sessions.plan_unit_id nullable machen (SQLite table recreation) ─
+    // Prüfen ob plan_unit_id noch NOT NULL ist
+    $sesColInfo = $pdo->query("PRAGMA table_info(sessions)")->fetchAll(PDO::FETCH_ASSOC);
+    $unitColInfo = null;
+    foreach ($sesColInfo as $col) {
+        if ($col['name'] === 'plan_unit_id') { $unitColInfo = $col; break; }
+    }
+    if ($unitColInfo && (int)$unitColInfo['notnull'] === 1) {
+        // Tabelle neu erstellen mit nullable plan_unit_id
+        $pdo->exec("PRAGMA foreign_keys = OFF");
+        $pdo->exec("BEGIN");
+        $pdo->exec("CREATE TABLE sessions_new (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id              INTEGER NOT NULL REFERENCES users(id),
+            plan_unit_id         INTEGER NULL REFERENCES plan_units(id),
+            custom_adventure_id  INTEGER NULL REFERENCES custom_adventures(id),
+            status               TEXT CHECK(status IN ('active','completed','aborted')) DEFAULT 'active',
+            started_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+            completed_at         DATETIME NULL,
+            duration_seconds     INTEGER NULL,
+            total_items          INTEGER DEFAULT 0,
+            correct_first_try    INTEGER DEFAULT 0,
+            correct_second_try   INTEGER DEFAULT 0,
+            wrong_total          INTEGER DEFAULT 0,
+            fatigue_score        INTEGER NULL,
+            motivation_score     INTEGER NULL,
+            ai_summary           TEXT NULL,
+            ai_next_action       TEXT NULL
+        )");
+        $pdo->exec("INSERT INTO sessions_new
+            (id, user_id, plan_unit_id, status, started_at, completed_at,
+             duration_seconds, total_items, correct_first_try, correct_second_try,
+             wrong_total, fatigue_score, motivation_score, ai_summary, ai_next_action)
+            SELECT id, user_id, plan_unit_id, status, started_at, completed_at,
+                   duration_seconds, total_items, correct_first_try, correct_second_try,
+                   wrong_total, fatigue_score, motivation_score, ai_summary, ai_next_action
+            FROM sessions");
+        $pdo->exec("DROP TABLE sessions");
+        $pdo->exec("ALTER TABLE sessions_new RENAME TO sessions");
+        $pdo->exec("COMMIT");
+        $pdo->exec("PRAGMA foreign_keys = ON");
+    }
 }
 
 // Fehlerausgabe konfigurieren

@@ -544,7 +544,7 @@ if ($session) {
   <!-- Complete Screen (hidden until done) -->
   <div id="complete-screen">
     <div class="icon">🎉</div>
-    <h2>Einheit abgeschlossen!</h2>
+    <h2><?= !empty($unit['is_adventure']) ? 'Abenteuer abgeschlossen!' : 'Einheit abgeschlossen!' ?></h2>
     <div id="quest-banner" class="quest-complete-banner" style="display:none;"></div>
     <div class="complete-stats" id="complete-stats"></div>
 
@@ -568,11 +568,12 @@ if ($session) {
   <!-- Data for JS -->
   <script>
     var SESSION_DATA = <?= json_encode([
-      'sessionId'  => (int)$session['id'],
-      'unitId'     => (int)$unit['id'],
-      'csrfToken'  => $csrfToken,
-      'items'      => $itemsForJs,
-      'format'     => $unit['format'],
+      'sessionId'   => (int)$session['id'],
+      'unitId'      => (int)$unit['id'],
+      'csrfToken'   => $csrfToken,
+      'items'       => $itemsForJs,
+      'format'      => $unit['format'],
+      'is_adventure'=> !empty($unit['is_adventure']),
     ], JSON_HEX_TAG | JSON_HEX_AMP) ?>;
   </script>
 

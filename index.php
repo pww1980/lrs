@@ -379,6 +379,10 @@ match (true) {
             exit;
         })(),
 
+    // Session-Details (AJAX GET, Admin)
+    $uri === '/admin/sessions/detail' && $method === 'GET'
+        => \App\Controllers\DashboardController::sessionDetail(),
+
     // Plan bestätigen (AJAX POST)
     $uri === '/admin/plan/approve' && $method === 'POST'
         => \App\Controllers\DashboardController::approvePlan(),
@@ -438,6 +442,26 @@ match (true) {
 
     $uri === '/learn/test' && $method === 'POST'
         => \App\Controllers\TestController::startTest(),
+
+    // ── Zusätzliche Abenteuer (Admin) ───────────────────────────────────
+    $uri === '/admin/adventures' && $method === 'GET'
+        => \App\Controllers\AdventureController::list(),
+
+    $uri === '/admin/adventures/save' && $method === 'POST'
+        => \App\Controllers\AdventureController::save(),
+
+    $uri === '/admin/adventures/generate-diktat' && $method === 'POST'
+        => \App\Controllers\AdventureController::generateDiktat(),
+
+    $uri === '/admin/adventures/delete' && $method === 'POST'
+        => \App\Controllers\AdventureController::delete(),
+
+    // ── Zusätzliche Abenteuer (Kind) ────────────────────────────────────
+    $uri === '/learn/adventure/start' && $method === 'POST'
+        => \App\Controllers\AdventureController::startSession(),
+
+    $uri === '/learn/adventure' && $method === 'GET'
+        => \App\Controllers\SessionController::showAdventure(),
 
     // ── Questlog (Abenteuermap) ──────────────────────────────────────────
     $uri === '/learn/questlog' && $method === 'GET'

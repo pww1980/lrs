@@ -233,7 +233,8 @@ CREATE TABLE IF NOT EXISTS generated_content (
 CREATE TABLE IF NOT EXISTS sessions (
   id                   INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id              INTEGER NOT NULL REFERENCES users(id),
-  plan_unit_id         INTEGER NOT NULL REFERENCES plan_units(id),
+  plan_unit_id         INTEGER NULL REFERENCES plan_units(id),
+  custom_adventure_id  INTEGER NULL REFERENCES custom_adventures(id),
   status               TEXT CHECK(status IN ('active','completed','aborted')) DEFAULT 'active',
   started_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
   completed_at         DATETIME NULL,
@@ -254,6 +255,7 @@ CREATE TABLE IF NOT EXISTS session_items (
   word_id              INTEGER NULL REFERENCES words(id),
   sentence_id          INTEGER NULL REFERENCES sentences(id),
   generated_content_id INTEGER NULL REFERENCES generated_content(id),
+  custom_text          VARCHAR(500) NULL,
   format               TEXT CHECK(format IN ('word','gap','sentence','mini_diktat')) NOT NULL,
   order_index          INTEGER NOT NULL,
   tts_replays          INTEGER DEFAULT 0,
@@ -405,3 +407,33 @@ VALUES
   ('creeper_friend', 'Creeper-Freund', 'Ein Wort macht dir Probleme — aber du gibst nicht auf!', '🐛', 'special', 'same_word_wrong',            10, NULL, NULL, 1),
   ('eagle_eye',      'Adlerauge',      '20 Wörter in Folge beim ersten Versuch — unglaublich!',  '🦅', 'special', 'correct_streak_first_try',   20, NULL, NULL, 1),
   ('slow_learner',   'Langsam aber sicher', 'Du hörst genau hin — das ist deine Stärke!',        '🐢', 'special', 'tts_slow_count',             50, NULL, NULL, 1);
+
+-- ── Zusätzliche Abenteuer (Custom Adventures) ──────────────────────────────
+
+CREATE TABLE IF NOT EXISTS custom_adventures (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  child_id     INTEGER NOT NULL REFERENCES users(id),
+  created_by   INTEGER NOT NULL REFERENCES users(id),
+  title        VARCHAR(200) NOT NULL DEFAULT 'Schulaufgabe',
+  school_date  DATE NULL,
+  scheduled_date DATE NOT NULL,
+  status       TEXT CHECK(status IN ('pending','active','completed','cancelled')) DEFAULT 'pending',
+  diktat_generated INTEGER DEFAULT 0,
+  ai_notes     TEXT NULL,
+  created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME NULL
+);
+
+CREATE TABLE IF NOT EXISTS custom_adventure_words (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  adventure_id INTEGER NOT NULL REFERENCES custom_adventures(id) ON DELETE CASCADE,
+  word         VARCHAR(200) NOT NULL,
+  order_index  INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS custom_adventure_sentences (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  adventure_id INTEGER NOT NULL REFERENCES custom_adventures(id) ON DELETE CASCADE,
+  sentence     TEXT NOT NULL,
+  order_index  INTEGER NOT NULL DEFAULT 0
+);

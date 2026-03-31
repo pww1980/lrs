@@ -524,6 +524,16 @@ class SessionController
             ? (trim($correct) === trim($userInput))
             : (mb_strtolower(trim($correct)) === mb_strtolower(trim($userInput)));
 
+        // Satzzeichen-Toleranz: Nur Satzzeichen vergessen → korrekt mit Hinweis
+        $punctuationHint = false;
+        if (!$isCorrect && in_array($item['format'], ['sentence', 'mini_diktat'])) {
+            $stripPunct = fn(string $s) => mb_strtolower(trim(preg_replace('/[.,!?;:\s]+/', '', $s)));
+            if ($stripPunct($correct) === $stripPunct($userInput)) {
+                $isCorrect    = true;
+                $punctuationHint = true;
+            }
+        }
+
         // Zweiter Versuch entscheiden (nur beim ersten Versuch)
         $secondTryAllowed = false;
         if (!$isCorrect && $attemptNumber === 1) {
@@ -569,7 +579,7 @@ class SessionController
         }
 
         // Feedback vorbereiten (local, kein AI bei jedem Item)
-        $feedback = self::buildLocalFeedback($correct, $userInput, $isCorrect, $category, $secondTryAllowed && !$isFinal);
+        $feedback = self::buildLocalFeedback($correct, $userInput, $isCorrect, $category, $secondTryAllowed && !$isFinal, $punctuationHint);
 
         // Nächstes Item laden
         $sessionId  = (int)$item['session_id'];
@@ -649,9 +659,17 @@ class SessionController
                 )->execute([$sesRow['custom_adventure_id']]);
                 $adb->commit();
                 echo json_encode([
-                    'success' => true, 'quest_completed' => false, 'biome_completed' => false,
-                    'plan_completed' => false, 'adventure_done' => true,
-                    'correct' => (int)$stats['correct'], 'wrong' => (int)$stats['wrong'],
+                    'success'         => true,
+                    'quest_completed' => false,
+                    'biome_completed' => false,
+                    'plan_completed'  => false,
+                    'adventure_done'  => true,
+                    'stats'           => [
+                        'total_items'        => (int)$stats['total'],
+                        'correct_first_try'  => (int)$stats['correct'],
+                        'correct_second_try' => 0,
+                        'wrong_total'        => (int)$stats['wrong'],
+                    ],
                 ]);
             } catch (\Throwable $e) {
                 $adb->rollBack();
@@ -1200,9 +1218,16 @@ class SessionController
         string $userInput,
         bool   $isCorrect,
         string $category,
-        bool   $isSecondTry
+        bool   $isSecondTry,
+        bool   $punctuationHint = false
     ): array {
         if ($isCorrect) {
+            if ($punctuationHint) {
+                return [
+                    'text' => 'Fast perfekt! ✅',
+                    'hint' => 'Vergiss das Satzzeichen nicht! (. , ! ?)',
+                ];
+            }
             $texts = [
                 'Super! Genau richtig! ✅',
                 'Richtig! Weiter so! ⭐',

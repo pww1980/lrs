@@ -790,16 +790,14 @@ const TEST_DATA = {
         <div class="analysis-sub">Papa kann deinen Lernplan jetzt im Dashboard bestätigen.</div>
       </div>
     <?php else: ?>
-      <div class="analysis-box pending" id="analysis-box">
-        <span class="analysis-icon" id="analysis-icon">🔍</span>
-        <div class="analysis-title" id="analysis-title">KI-Auswertung starten</div>
-        <div class="analysis-sub"   id="analysis-sub">
-          Die KI analysiert deine Antworten und erstellt einen Lernplan für Papa.
-          Das dauert ca. 20–30 Sekunden.
+      <!-- Kinder sehen nur die Wartebox — Auswertung immer durch Papa/Admin -->
+      <div class="analysis-box pending">
+        <span class="analysis-icon">⏳</span>
+        <div class="analysis-title">Super gemacht!</div>
+        <div class="analysis-sub">
+          Papa muss jetzt im Dashboard die Auswertung starten und deinen Lernplan bestätigen.
+          Das dauert nur einen Moment!
         </div>
-        <button class="btn-analyze" id="btn-analyze" type="button">
-          🤖 Jetzt auswerten lassen
-        </button>
       </div>
     <?php endif; ?>
 
@@ -808,59 +806,13 @@ const TEST_DATA = {
 </div>
 
 <script>
+// Auswertung erfolgt nur durch Papa/Admin im Dashboard — kein Button für Kinder.
+// "Zur Startseite"-Link nach kurzer Verzögerung einblenden.
 (function() {
-  var testId   = <?= (int)($test['id'] ?? 0) ?>;
-  var csrf     = <?= json_encode($csrfToken) ?>;
-  var btn      = document.getElementById('btn-analyze');
-  var box      = document.getElementById('analysis-box');
-  var icon     = document.getElementById('analysis-icon');
-  var title    = document.getElementById('analysis-title');
-  var sub      = document.getElementById('analysis-sub');
-  var homeBtn  = document.getElementById('btn-home');
-
-  if (!btn) return; // already done
-
-  btn.addEventListener('click', function() {
-    btn.disabled = true;
-    box.className = 'analysis-box running';
-    icon.innerHTML = '<span class="analysis-spinner"></span>';
-    title.textContent = 'Auswertung läuft…';
-    sub.textContent   = 'Die KI analysiert deine Antworten. Bitte warten…';
-
-    fetch('<?= url('/learn/test/analyze') ?>', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csrf_token: csrf, test_id: testId }),
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.success || data.already_done) {
-          box.className     = 'analysis-box done';
-          icon.textContent  = '✅';
-          title.textContent = 'Auswertung abgeschlossen!';
-          sub.textContent   = data.message || 'Papa kann deinen Lernplan jetzt im Dashboard bestätigen.';
-          btn.remove();
-          if (homeBtn) homeBtn.style.display = 'inline-block';
-        } else {
-          box.className     = 'analysis-box error';
-          icon.textContent  = '❌';
-          title.textContent = 'Auswertung fehlgeschlagen';
-          sub.textContent   = data.message || 'Bitte Papa bitten, die Auswertung manuell zu starten.';
-          btn.disabled      = false;
-          btn.textContent   = '🔄 Erneut versuchen';
-          if (homeBtn) homeBtn.style.display = 'inline-block';
-        }
-      })
-      .catch(function() {
-        box.className     = 'analysis-box error';
-        icon.textContent  = '❌';
-        title.textContent = 'Netzwerkfehler';
-        sub.textContent   = 'Bitte Seite neu laden oder Papa bitten, die Auswertung manuell zu starten.';
-        btn.disabled      = false;
-        btn.textContent   = '🔄 Erneut versuchen';
-        if (homeBtn) homeBtn.style.display = 'inline-block';
-      });
-  });
+  var homeBtn = document.getElementById('btn-home');
+  if (homeBtn) {
+    setTimeout(function() { homeBtn.style.display = 'inline-block'; }, 1500);
+  }
 })();
 </script>
 

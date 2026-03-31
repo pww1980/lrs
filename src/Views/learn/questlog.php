@@ -13,6 +13,29 @@
 $pageTitle = 'Abenteuermap — ' . APP_NAME;
 $themeName = $_SESSION['theme'] ?? 'minecraft';
 $csrfToken = \App\Helpers\Auth::csrfToken();
+
+// Theme-Farben + Labels
+$tc = $theme['colors']  ?? [];
+$tl = $theme['labels']  ?? [];
+$tf = $theme['flavor_texts'] ?? [];
+$themeColorPrimary   = $tc['primary']    ?? '#2d5016';
+$themeColorPrimaryDk = $tc['primary_dk'] ?? '#1a3a08';
+$themeColorAccent    = $tc['accent']     ?? '#4a9220';
+$themeLabelQuest    = $tl['quest']    ?? 'Quest';
+$themeLabelBiome    = $tl['biome']    ?? 'Biom';
+$themeLabelPoints   = $tl['points']   ?? 'Punkte';
+$themeLabelAch      = $tl['achievement'] ?? 'Auszeichnung';
+$themeIcon          = $theme['icon']  ?? '⛏️';
+$themeName_display  = $theme['name']  ?? 'Minecraft';
+
+// Biom-Farben-Map aus theme.json (id → [color_from, color_to])
+$biomeColorMap = [];
+foreach ($theme['biomes'] ?? [] as $tb) {
+    $biomeColorMap[$tb['id']] = [
+        'from' => $tb['color_from'] ?? '#555',
+        'to'   => $tb['color_to']   ?? '#777',
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -24,13 +47,13 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
   <style>
     /* ── Questlog Layout ── */
     .questlog-header {
-      background: linear-gradient(135deg, #2d5016 0%, #3d7a1a 50%, #4a9220 100%);
+      background: linear-gradient(135deg, <?= $themeColorPrimaryDk ?> 0%, <?= $themeColorPrimary ?> 60%, <?= $themeColorAccent ?> 100%);
       color: #fff;
       padding: 1.25rem 1.5rem;
       display: flex;
       align-items: center;
       gap: 1rem;
-      border-bottom: 3px solid #1a3a08;
+      border-bottom: 3px solid <?= $themeColorPrimaryDk ?>;
     }
     .questlog-header .logo { font-size: 2rem; }
     .questlog-header h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
@@ -77,10 +100,6 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
       color: #fff;
       position: relative;
     }
-    .biome-header.forest  { background: linear-gradient(135deg, #2d6a1f, #4a9228); }
-    .biome-header.desert  { background: linear-gradient(135deg, #8a6914, #c4960a); }
-    .biome-header.nether  { background: linear-gradient(135deg, #8a1414, #c43a0a); }
-    .biome-header.the_end { background: linear-gradient(135deg, #2a1a5e, #5a2d9a); }
     .biome-header.locked-bg { background: linear-gradient(135deg, #555, #777); }
 
     .biome-icon { font-size: 2rem; }
@@ -355,10 +374,10 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
 <body class="theme-<?= htmlspecialchars($themeName) ?>">
 
 <header class="questlog-header">
-  <span class="logo">⛏️</span>
+  <span class="logo"><?= $themeIcon ?></span>
   <div>
     <h1>Abenteuermap</h1>
-    <div class="subtitle"><?= htmlspecialchars($childName) ?>s Lernreise</div>
+    <div class="subtitle"><?= htmlspecialchars($childName) ?>s Lernreise · <?= htmlspecialchars($themeName_display) ?></div>
   </div>
   <div class="header-right">
     <a href="<?= url('/logout') ?>">Abmelden</a>
@@ -467,7 +486,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     <!-- Freigeschaltete Achievements -->
     <?php if (!empty($unlockedAchievements)): ?>
     <div class="achievements-section">
-      <div class="achievements-label">🏆 Deine Auszeichnungen</div>
+      <div class="achievements-label">🏆 Deine <?= htmlspecialchars($themeLabelAch) ?>en</div>
       <div class="achievements-row">
         <?php foreach ($unlockedAchievements as $ach):
           $isNew = !$ach['seen_by_user']; // war noch ungesehen vor diesem Laden
@@ -488,15 +507,16 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
     </div>
 
     <?php foreach ($biomes as $biomeIndex => $biome):
-      $biomeId = $biome['theme_biome'] ?? 'forest';
+      $biomeId  = $biome['theme_biome'] ?? 'forest';
       $isLocked    = $biome['status'] === 'locked';
       $isActive    = $biome['status'] === 'active';
       $isCompleted = $biome['status'] === 'completed';
 
-      // Biome header class
-      $headerClass = in_array($biomeId, ['forest','desert','nether','the_end'])
-                    ? $biomeId : 'locked-bg';
-      if ($isLocked) $headerClass = 'locked-bg';
+      // Biom-Farbe aus theme.json, Fallback grau wenn gesperrt
+      $bColors = $biomeColorMap[$biomeId] ?? ['from' => '#555', 'to' => '#777'];
+      $biomeHeaderStyle = $isLocked
+        ? 'background:linear-gradient(135deg,#555,#777)'
+        : 'background:linear-gradient(135deg,' . $bColors['from'] . ',' . $bColors['to'] . ')';
 
       $statusLabel = match($biome['status']) {
         'active'    => 'Aktiv',
@@ -510,11 +530,11 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
       <?php endif; ?>
 
       <div class="biome-card <?= $isLocked ? 'locked' : '' ?>">
-        <div class="biome-header <?= htmlspecialchars($headerClass) ?>">
+        <div class="biome-header" style="<?= $biomeHeaderStyle ?>">
           <span class="biome-icon"><?= htmlspecialchars($biome['icon'] ?? '🌍') ?></span>
           <div>
             <div class="biome-name"><?= htmlspecialchars($biome['name']) ?></div>
-            <div class="biome-block">Block <?= htmlspecialchars($biome['block']) ?></div>
+            <div class="biome-block"><?= htmlspecialchars($themeLabelBiome) ?> · Block <?= htmlspecialchars($biome['block']) ?></div>
           </div>
           <span class="biome-status-badge <?= htmlspecialchars($biome['status']) ?>">
             <?= htmlspecialchars($statusLabel) ?>
@@ -526,7 +546,7 @@ $csrfToken = \App\Helpers\Auth::csrfToken();
 
         <div class="quest-list">
           <?php if (empty($biome['quests'])): ?>
-            <p style="color:#999;font-size:0.85rem;padding:0.5rem;">Keine Quests</p>
+            <p style="color:#999;font-size:0.85rem;padding:0.5rem;">Keine <?= htmlspecialchars($themeLabelQuest) ?>s</p>
           <?php endif; ?>
 
           <?php foreach ($biome['quests'] as $quest):

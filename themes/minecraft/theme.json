@@ -4,10 +4,10 @@
   "icon": "⛏️",
   "locked_by_default": false,
   "biomes": [
-    { "id": "forest",  "label": "Der Wald",   "icon": "🌲", "block_index": 0 },
-    { "id": "desert",  "label": "Die Wüste",  "icon": "🏜️", "block_index": 1 },
-    { "id": "nether",  "label": "Der Nether", "icon": "🌋", "block_index": 2 },
-    { "id": "the_end", "label": "Das End",    "icon": "🌟", "block_index": 3 }
+    { "id": "forest",  "label": "Der Wald",   "icon": "🌲", "block_index": 0, "color_from": "#2d6a1f", "color_to": "#4a9228" },
+    { "id": "desert",  "label": "Die Wüste",  "icon": "🏜️", "block_index": 1, "color_from": "#8a6914", "color_to": "#c4960a" },
+    { "id": "nether",  "label": "Der Nether", "icon": "🌋", "block_index": 2, "color_from": "#8a1414", "color_to": "#c43a0a" },
+    { "id": "the_end", "label": "Das End",    "icon": "🌟", "block_index": 3, "color_from": "#2a1a5e", "color_to": "#5a2d9a" }
   ],
   "colors": {
     "primary":    "#5d8a38",

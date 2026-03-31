@@ -22,14 +22,29 @@ $formatLabel = match($unit['format'] ?? 'word') {
 };
 
 $biomeThemeId = $unit['theme_biome'] ?? 'forest';
-$biomeHeaderClass = in_array($biomeThemeId, ['forest','desert','nether','the_end'])
-                    ? $biomeThemeId : 'forest';
 
-// Biome icon aus theme
-$biomeIcon = '🌲';
+// Biome icon + Farben aus theme.json
+$biomeIcon      = '🌲';
+$biomeColorFrom = '#2d6a1f';
+$biomeColorTo   = '#4a9228';
 foreach ($theme['biomes'] ?? [] as $tb) {
-    if ($tb['id'] === $biomeThemeId) { $biomeIcon = $tb['icon']; break; }
+    if ($tb['id'] === $biomeThemeId) {
+        $biomeIcon      = $tb['icon']        ?? $biomeIcon;
+        $biomeColorFrom = $tb['color_from']  ?? $biomeColorFrom;
+        $biomeColorTo   = $tb['color_to']    ?? $biomeColorTo;
+        break;
+    }
 }
+$biomeHeaderStyle = 'background:linear-gradient(135deg,' . $biomeColorFrom . ',' . $biomeColorTo . ')';
+
+// Theme-Labels
+$tc = $theme['colors']  ?? [];
+$tl = $theme['labels']  ?? [];
+$tf = $theme['flavor_texts'] ?? [];
+$themeLabelQuest   = $tl['quest']    ?? 'Quest';
+$themeTextCorrect  = $tf['correct']  ?? 'Richtig! ✅';
+$themeTextWrong    = $tf['wrong']    ?? 'Noch einmal versuchen!';
+$themeTextQuestDone= $tf['quest_done'] ?? 'Quest abgeschlossen!';
 
 // Items JSON für JS — ohne korrekte Antworten zu exponieren
 $itemsForJs = [];
@@ -66,10 +81,7 @@ if ($session) {
       gap: 0.75rem;
       color: #fff;
     }
-    .session-header.forest  { background: linear-gradient(135deg, #2d6a1f, #4a9228); }
-    .session-header.desert  { background: linear-gradient(135deg, #8a6914, #c4960a); }
-    .session-header.nether  { background: linear-gradient(135deg, #8a1414, #c43a0a); }
-    .session-header.the_end { background: linear-gradient(135deg, #2a1a5e, #5a2d9a); }
+    /* Biome-Farben kommen jetzt als inline style aus theme.json */
 
     .session-header .biome-icon { font-size: 1.8rem; }
     .session-header .header-info h2 { font-size: 1rem; font-weight: 700; margin: 0; }
@@ -432,14 +444,14 @@ if ($session) {
 </head>
 <body class="theme-<?= htmlspecialchars($themeName) ?>">
 
-<header class="session-header <?= htmlspecialchars($biomeHeaderClass) ?>">
+<header class="session-header" style="<?= $biomeHeaderStyle ?>">
   <span class="biome-icon"><?= htmlspecialchars($biomeIcon) ?></span>
   <div class="header-info">
     <h2><?= htmlspecialchars($unit['quest_title'] ?? 'Übungseinheit') ?></h2>
     <div class="sub">
       <?= htmlspecialchars($unit['biome_name'] ?? '') ?> ·
-      <?= htmlspecialchars($formatLabel) ?> ·
-      Kat. <?= htmlspecialchars($unit['category'] ?? '') ?>
+      <?= htmlspecialchars($themeLabelQuest) ?> ·
+      <?= htmlspecialchars($formatLabel) ?>
     </div>
   </div>
   <a href="<?= url('/learn/questlog') ?>" class="back-link">← Karte</a>
@@ -568,12 +580,15 @@ if ($session) {
   <!-- Data for JS -->
   <script>
     var SESSION_DATA = <?= json_encode([
-      'sessionId'   => (int)$session['id'],
-      'unitId'      => (int)$unit['id'],
-      'csrfToken'   => $csrfToken,
-      'items'       => $itemsForJs,
-      'format'      => $unit['format'],
-      'is_adventure'=> !empty($unit['is_adventure']),
+      'sessionId'    => (int)$session['id'],
+      'unitId'       => (int)$unit['id'],
+      'csrfToken'    => $csrfToken,
+      'items'        => $itemsForJs,
+      'format'       => $unit['format'],
+      'is_adventure' => !empty($unit['is_adventure']),
+      'txt_quest_done' => $themeTextQuestDone,
+      'txt_correct'    => $themeTextCorrect,
+      'txt_wrong'      => $themeTextWrong,
     ], JSON_HEX_TAG | JSON_HEX_AMP) ?>;
   </script>
 

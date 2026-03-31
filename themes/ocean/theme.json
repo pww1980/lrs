@@ -5,10 +5,10 @@
   "locked_by_default": true,
   "unlock_hint": "Schließe Block C ab, um das Ozean-Theme freizuschalten!",
   "biomes": [
-    { "id": "reef",    "label": "Das Riff",    "icon": "🐠", "block_index": 0 },
-    { "id": "deep",    "label": "Die Tiefsee", "icon": "🦑", "block_index": 1 },
-    { "id": "volcano", "label": "Der Vulkan",  "icon": "🌋", "block_index": 2 },
-    { "id": "abyss",   "label": "Der Abgrund", "icon": "🌑", "block_index": 3 }
+    { "id": "reef",    "label": "Das Riff",    "icon": "🐠", "block_index": 0, "color_from": "#006994", "color_to": "#0097a7" },
+    { "id": "deep",    "label": "Die Tiefsee", "icon": "🦑", "block_index": 1, "color_from": "#00455a", "color_to": "#00696f" },
+    { "id": "volcano", "label": "Der Vulkan",  "icon": "🌋", "block_index": 2, "color_from": "#7b1f00", "color_to": "#b83000" },
+    { "id": "abyss",   "label": "Der Abgrund", "icon": "🌑", "block_index": 3, "color_from": "#0d0d2b", "color_to": "#1a1a4a" }
   ],
   "colors": {
     "primary":    "#006994",

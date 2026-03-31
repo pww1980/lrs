@@ -128,10 +128,13 @@
       ttsIcon.classList.remove('playing');
       enableAnswering();
     });
-    audioObj.play().catch(() => {
-      ttsIcon.classList.remove('playing');
-      enableAnswering();
-    });
+    // 1s Pause vor Wiedergabe damit Audioausgabe bereit ist und Anfang nicht abgeschnitten wird
+    setTimeout(() => {
+      if (audioObj) audioObj.play().catch(() => {
+        ttsIcon.classList.remove('playing');
+        enableAnswering();
+      });
+    }, 1000);
   }
 
   function playBrowserTts(text, lang, rate) {

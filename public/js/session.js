@@ -169,7 +169,10 @@
     ttsAudio.addEventListener('ended',   onTtsEnded);
     ttsAudio.addEventListener('error',   onTtsEnded);
     setTtsBtnState('playing');
-    ttsAudio.play();
+    // 1s Pause vor Wiedergabe damit Anfang nicht abgeschnitten wird
+    setTimeout(function() {
+      if (ttsAudio) ttsAudio.play();
+    }, 1000);
   }
 
   function playBrowserTts(cfg) {

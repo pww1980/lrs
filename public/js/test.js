@@ -55,7 +55,28 @@
   }
 
   updateCounter();
-  loadAndPlayTts(currentItemId, 'normal');
+
+  // ── 2-Sekunden-Startpause ───────────────────────────────────────────────
+  // Gibt dem Kind Zeit sich zu sammeln, bevor das erste Wort gespielt wird.
+  (function startCountdown() {
+    var secs = 2;
+    ttsStatus.textContent = 'Bereit? Gleich geht\'s los … ' + secs;
+    ttsIcon.style.opacity = '0.4';
+    answerInput.disabled  = true;
+    btnSubmit.disabled    = true;
+
+    var cd = setInterval(function() {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(cd);
+        ttsIcon.style.opacity = '';
+        ttsStatus.textContent = 'Wort wird geladen…';
+        loadAndPlayTts(currentItemId, 'normal');
+      } else {
+        ttsStatus.textContent = 'Bereit? Gleich geht\'s los … ' + secs;
+      }
+    }, 1000);
+  })();
 
   // ── TTS ─────────────────────────────────────────────────────────────────
 

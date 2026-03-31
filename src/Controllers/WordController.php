@@ -182,4 +182,114 @@ class WordController
         echo json_encode(['success' => true, 'id' => $newId, 'word' => $word]);
         exit;
     }
+
+    // ── Wörter re-generieren ───────────────────────────────────────────
+
+    /**
+     * GET /admin/words/generate?child_id=X
+     * Zeigt Übersicht aller Kategorien mit Wortanzahl + Regenerierungsmöglichkeit.
+     */
+    public static function generatePage(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+
+        // Kind auswählen
+        $childId  = (int)($_GET['child_id'] ?? 0);
+        $children = [];
+
+        if ($isSuperadmin) {
+            $stmt = db()->query(
+                "SELECT id, display_name, grade_level FROM users WHERE role='child' AND active=1 ORDER BY display_name"
+            );
+            $children = $stmt->fetchAll();
+        } else {
+            $stmt = db()->prepare(
+                "SELECT u.id, u.display_name, u.grade_level
+                 FROM users u JOIN child_admins ca ON u.id=ca.child_id
+                 WHERE ca.admin_id=? AND u.role='child' AND u.active=1
+                 ORDER BY u.display_name"
+            );
+            $stmt->execute([$adminId]);
+            $children = $stmt->fetchAll();
+        }
+
+        // Erstes Kind vorauswählen wenn nicht angegeben
+        if (!$childId && !empty($children)) {
+            $childId = (int)$children[0]['id'];
+        }
+
+        $childInfo    = null;
+        $categoryStatus = [];
+        $curriculumMeta = [];
+        $error        = null;
+
+        if ($childId) {
+            // Kind validieren
+            foreach ($children as $ch) {
+                if ((int)$ch['id'] === $childId) { $childInfo = $ch; break; }
+            }
+            if (!$childInfo) { redirect('/admin/words/generate'); }
+
+            try {
+                $gen            = new \App\Services\WordGeneratorService($childId);
+                $categoryStatus = $gen->getCategoryStatus();
+                $curriculumMeta = $gen->getCurriculumMeta();
+            } catch (\Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+
+        require __DIR__ . '/../Views/admin/generate_words.php';
+    }
+
+    /**
+     * POST /admin/words/generate-batch  (AJAX, JSON)
+     * Generiert Wörter für EINE Kategorie — mit optionalem force-Flag.
+     */
+    public static function generateBatch(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        ob_start();
+
+        $data     = json_decode(file_get_contents('php://input'), true) ?? [];
+        $token    = $data['csrf_token'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            ob_end_clean();
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF']);
+            exit;
+        }
+
+        $childId  = (int)($data['child_id']  ?? 0);
+        $category = preg_replace('/[^A-D0-9]/', '', (string)($data['category'] ?? ''));
+        $force    = !empty($data['force']);
+
+        if (!$childId || $category === '') {
+            ob_end_clean();
+            echo json_encode(['error' => 'Ungültige Parameter']);
+            exit;
+        }
+
+        try {
+            $gen    = new \App\Services\WordGeneratorService($childId);
+            $result = $gen->ensureCategory($category, $force);
+        } catch (\Throwable $e) {
+            ob_end_clean();
+            echo json_encode(['ok' => false, 'category' => $category, 'new_words' => 0,
+                              'skipped' => false, 'error' => $e->getMessage()]);
+            exit;
+        }
+
+        ob_end_clean();
+        echo json_encode([
+            'ok'        => true,
+            'category'  => $category,
+            'new_words' => $result['new_words'],
+            'skipped'   => $result['skipped'],
+            'error'     => $result['error'] ?? null,
+        ]);
+        exit;
+    }
 }

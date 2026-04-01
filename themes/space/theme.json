@@ -20,7 +20,7 @@
     "points":      "Sterne",
     "quest":       "Mission",
     "biome":       "Planet",
-    "achievement": "Auszeichnung"
+    "achievement": "Erfolge"
   },
   "flavor_texts": {
     "welcome":    "Mission gestartet! 🚀",

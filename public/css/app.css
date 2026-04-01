@@ -237,11 +237,25 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ── Minecraft-Theme Anpassungen ── */
+/* ── Theme-Anpassungen ── */
 
 .theme-minecraft {
   --color-primary:    #5d8a38;
   --color-primary-dk: #3b5e1e;
+}
+
+.theme-space {
+  --color-primary:    #2979ff;
+  --color-primary-dk: #1565c0;
+  --color-bg:         #f0f4ff;
+  --color-surface:    #e8f1ff;
+}
+
+.theme-ocean {
+  --color-primary:    #00897b;
+  --color-primary-dk: #00695c;
+  --color-bg:         #e0f5f1;
+  --color-surface:    #f0fdfb;
 }
 
 /* ── Responsive ── */

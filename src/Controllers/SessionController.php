@@ -199,6 +199,20 @@ class SessionController
         $advStmt->execute([$userId]);
         $pendingAdventures = $advStmt->fetchAll();
 
+        // Pending/Active Abenteuer-Gruppen laden
+        $grpStmt = db()->prepare(
+            "SELECT ag.*,
+                    COUNT(DISTINCT agi.adventure_id) AS adventure_count,
+                    (SELECT s.id FROM sessions s WHERE s.adventure_group_id = ag.id AND s.status='active' LIMIT 1) AS active_session_id
+             FROM adventure_groups ag
+             LEFT JOIN adventure_group_items agi ON agi.group_id = ag.id
+             WHERE ag.child_id = ? AND ag.status IN ('pending','active')
+             GROUP BY ag.id
+             ORDER BY ag.scheduled_date ASC, ag.created_at ASC"
+        );
+        $grpStmt->execute([$userId]);
+        $pendingAdventureGroups = $grpStmt->fetchAll();
+
         // Eltern-Nachrichten (ungelesen)
         $msgStmt = db()->prepare("
             SELECT id, message, emoji, created_at
@@ -274,10 +288,14 @@ class SessionController
         if (!$sessionId) { redirect('/learn/questlog'); }
 
         $sesStmt = db()->prepare(
-            "SELECT s.*, ca.title AS adventure_title, ca.id AS adventure_id
+            "SELECT s.*,
+                    ca.title AS adventure_title,
+                    ag.title AS group_title
              FROM sessions s
-             JOIN custom_adventures ca ON s.custom_adventure_id = ca.id
-             WHERE s.id=? AND s.user_id=? AND s.status='active'"
+             LEFT JOIN custom_adventures ca ON s.custom_adventure_id = ca.id
+             LEFT JOIN adventure_groups   ag ON s.adventure_group_id  = ag.id
+             WHERE s.id=? AND s.user_id=? AND s.status='active'
+               AND (s.custom_adventure_id IS NOT NULL OR s.adventure_group_id IS NOT NULL)"
         );
         $sesStmt->execute([$sessionId, $userId]);
         $session = $sesStmt->fetch();
@@ -287,16 +305,18 @@ class SessionController
         $progress = self::getSessionProgress($sessionId);
         $theme    = self::loadTheme($_SESSION['theme'] ?? 'minecraft');
 
+        $adventureTitle = $session['adventure_title'] ?? $session['group_title'] ?? 'Abenteuer';
+
         // Fake $unit so session.php renders correctly
         $unit = [
-            'id'         => 0,
-            'format'     => 'word',
-            'word_count' => count($items),
-            'difficulty' => 1,
-            'quest_title'=> $session['adventure_title'],
-            'biome_name' => 'Zusätzliches Abenteuer',
-            'theme_biome'=> 'forest',
-            'category'   => 'custom',
+            'id'          => 0,
+            'format'      => 'word',
+            'word_count'  => count($items),
+            'difficulty'  => 1,
+            'quest_title' => $adventureTitle,
+            'biome_name'  => 'Zusätzliches Abenteuer',
+            'theme_biome' => 'forest',
+            'category'    => 'custom',
             'is_adventure'=> true,
         ];
 
@@ -633,7 +653,58 @@ class SessionController
             exit;
         }
 
-        // Adventure-Sessions: Plan-Advancement überspringen, nur Adventure abschließen
+        // Gruppen-Adventure-Sessions: alle Member-Adventures done, Gruppe abschließen
+        if (!empty($sesRow['adventure_group_id'])) {
+            $statsStmt = db()->prepare(
+                "SELECT SUM(CASE WHEN final_correct=1 THEN 1 ELSE 0 END) AS correct,
+                        SUM(CASE WHEN final_correct=0 THEN 1 ELSE 0 END) AS wrong,
+                        COUNT(*) AS total
+                 FROM session_items WHERE session_id=?"
+            );
+            $statsStmt->execute([$sessionId]);
+            $stats = $statsStmt->fetch();
+
+            $grpRow = db()->prepare("SELECT repeatable FROM adventure_groups WHERE id=?");
+            $grpRow->execute([(int)$sesRow['adventure_group_id']]);
+            $grpData   = $grpRow->fetch();
+            $newStatus = ($grpData && $grpData['repeatable']) ? 'pending' : 'completed';
+
+            $adb = db();
+            $adb->beginTransaction();
+            try {
+                $adb->prepare(
+                    "UPDATE sessions
+                     SET status='completed', completed_at=CURRENT_TIMESTAMP,
+                         duration_seconds = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER),
+                         correct_first_try=?, wrong_total=?
+                     WHERE id=?"
+                )->execute([(int)$stats['correct'], (int)$stats['wrong'], $sessionId]);
+                $adb->prepare(
+                    "UPDATE adventure_groups SET status=?, completed_at=CURRENT_TIMESTAMP WHERE id=?"
+                )->execute([$newStatus, (int)$sesRow['adventure_group_id']]);
+                $adb->commit();
+                echo json_encode([
+                    'success'         => true,
+                    'quest_completed' => false,
+                    'biome_completed' => false,
+                    'plan_completed'  => false,
+                    'adventure_done'  => true,
+                    'stats'           => [
+                        'total_items'        => (int)$stats['total'],
+                        'correct_first_try'  => (int)$stats['correct'],
+                        'correct_second_try' => 0,
+                        'wrong_total'        => (int)$stats['wrong'],
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                $adb->rollBack();
+                error_log('completeSession group — ' . $e->getMessage());
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+            exit;
+        }
+
+        // Einzelne Adventure-Sessions: Plan-Advancement überspringen, nur Adventure abschließen
         if ($sesRow['custom_adventure_id']) {
             $statsStmt = db()->prepare(
                 "SELECT SUM(CASE WHEN final_correct=1 THEN 1 ELSE 0 END) AS correct,

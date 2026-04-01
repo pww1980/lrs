@@ -558,7 +558,7 @@ $sections = $progress['sections'] ?? [];
 
 <!-- Navbar -->
 <nav class="test-navbar">
-  <span class="test-navbar-brand">⛏️ <?= htmlspecialchars(APP_NAME) ?></span>
+  <span class="test-navbar-brand"><?= themeIcon() ?> <?= htmlspecialchars(APP_NAME) ?></span>
   <span class="test-navbar-user">🎮 <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?></span>
   <?php if ($viewState === 'test'): ?>
     <button class="btn-navbar" id="btn-pause-nav" type="button">⏸ Pause</button>
@@ -576,7 +576,7 @@ $sections = $progress['sections'] ?? [];
 
 <div class="test-main">
   <div class="start-screen">
-    <span class="start-icon">⛏️</span>
+    <span class="start-icon"><?= $theme['icon'] ?? '🚀' ?></span>
     <div class="start-title"><?= htmlspecialchars($theme['flavor_texts']['welcome'] ?? 'Bereit für dein Abenteuer?') ?></div>
     <div class="start-sub">
       <?= $hasCompleted

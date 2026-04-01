@@ -489,9 +489,18 @@ match (true) {
     $uri === '/admin/adventures/delete' && $method === 'POST'
         => \App\Controllers\AdventureController::delete(),
 
+    $uri === '/admin/adventure-groups/save' && $method === 'POST'
+        => \App\Controllers\AdventureController::saveGroup(),
+
+    $uri === '/admin/adventure-groups/delete' && $method === 'POST'
+        => \App\Controllers\AdventureController::deleteGroup(),
+
     // ── Zusätzliche Abenteuer (Kind) ────────────────────────────────────
     $uri === '/learn/adventure/start' && $method === 'POST'
         => \App\Controllers\AdventureController::startSession(),
+
+    $uri === '/learn/adventure-group/start' && $method === 'POST'
+        => \App\Controllers\AdventureController::startGroupSession(),
 
     $uri === '/learn/adventure' && $method === 'GET'
         => \App\Controllers\SessionController::showAdventure(),

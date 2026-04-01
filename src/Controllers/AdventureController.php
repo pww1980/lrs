@@ -15,8 +15,11 @@ use App\Services\EncryptionService;
  *   POST /admin/adventures/save             → save()        (Abenteuer + Wörter speichern)
  *   POST /admin/adventures/generate-diktat  → generateDiktat() (KI, AJAX)
  *   POST /admin/adventures/delete           → delete()
- *   POST /learn/adventure/start             → startSession()  (Kind)
- *   POST /learn/adventure/complete          → completeSession() (Kind, AJAX)
+ *   POST /admin/adventure-groups/save        → saveGroup()
+ *   POST /admin/adventure-groups/delete      → deleteGroup()
+ *   POST /learn/adventure/start              → startSession()       (Kind)
+ *   POST /learn/adventure-group/start        → startGroupSession()  (Kind)
+ *   POST /learn/adventure/complete           → completeSession()    (Kind, AJAX)
  */
 class AdventureController
 {
@@ -47,6 +50,19 @@ class AdventureController
         $stmt->execute([$childId]);
         $adventures = $stmt->fetchAll();
 
+        // Abenteuer-Gruppen laden
+        $grpStmt = db()->prepare(
+            "SELECT ag.*,
+                    COUNT(DISTINCT agi.adventure_id) AS adventure_count
+             FROM adventure_groups ag
+             LEFT JOIN adventure_group_items agi ON agi.group_id = ag.id
+             WHERE ag.child_id = ?
+             GROUP BY ag.id
+             ORDER BY ag.scheduled_date DESC, ag.created_at DESC"
+        );
+        $grpStmt->execute([$childId]);
+        $adventureGroups = $grpStmt->fetchAll();
+
         // Kinder des Admins für Switcher
         $children = self::loadChildrenForAdmin($adminId, $isSuperadmin);
 
@@ -65,6 +81,7 @@ class AdventureController
         $schoolDate   = trim($_POST['school_date']     ?? '');
         $schedDate    = trim($_POST['scheduled_date']  ?? date('Y-m-d'));
         $wordsRaw     = trim($_POST['words']           ?? '');
+        $repeatable   = isset($_POST['repeatable']) ? 1 : 0;
 
         $child = self::loadChild($childId, $adminId, $isSuperadmin);
         if (!$child) {
@@ -86,14 +103,15 @@ class AdventureController
         try {
             $db->prepare(
                 "INSERT INTO custom_adventures
-                 (child_id, created_by, title, school_date, scheduled_date, status)
-                 VALUES (?, ?, ?, ?, ?, 'pending')"
+                 (child_id, created_by, title, school_date, scheduled_date, status, repeatable)
+                 VALUES (?, ?, ?, ?, ?, 'pending', ?)"
             )->execute([
                 $childId,
                 $adminId,
                 $title ?: 'Schulaufgabe',
                 $schoolDate ?: null,
                 $schedDate,
+                $repeatable,
             ]);
             $adventureId = (int)$db->lastInsertId();
 
@@ -247,6 +265,87 @@ class AdventureController
         redirect('/admin/adventures?child_id=' . $childId);
     }
 
+    // ── Admin: Abenteuer-Gruppen ─────────────────────────────────────────
+
+    /**
+     * POST /admin/adventure-groups/save
+     * Erstellt ein neues Abenteuer-Paket (Gruppe mehrerer Adventures).
+     */
+    public static function saveGroup(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $childId      = (int)($_POST['child_id']     ?? 0);
+        $title        = trim($_POST['group_title']   ?? 'Abenteuerpaket');
+        $schedDate    = trim($_POST['group_sched']   ?? date('Y-m-d'));
+        $repeatable   = isset($_POST['group_repeatable']) ? 1 : 0;
+        $advIds       = array_map('intval', (array)($_POST['group_adventures'] ?? []));
+        $advIds       = array_filter($advIds);
+
+        $child = self::loadChild($childId, $adminId, $isSuperadmin);
+        if (!$child || empty($advIds)) {
+            redirect('/admin/adventures?child_id=' . $childId . '&error=group_invalid');
+        }
+
+        $db = db();
+        $db->beginTransaction();
+        try {
+            $db->prepare(
+                "INSERT INTO adventure_groups (child_id, created_by, title, scheduled_date, repeatable)
+                 VALUES (?, ?, ?, ?, ?)"
+            )->execute([$childId, $adminId, $title ?: 'Abenteuerpaket', $schedDate, $repeatable]);
+            $groupId = (int)$db->lastInsertId();
+
+            $iStmt = $db->prepare(
+                "INSERT INTO adventure_group_items (group_id, adventure_id, order_index) VALUES (?, ?, ?)"
+            );
+            foreach (array_values($advIds) as $idx => $advId) {
+                $iStmt->execute([$groupId, $advId, $idx]);
+            }
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('AdventureController::saveGroup — ' . $e->getMessage());
+            redirect('/admin/adventures?child_id=' . $childId . '&error=group_save_failed');
+        }
+
+        redirect('/admin/adventures?child_id=' . $childId . '&group_saved=1');
+    }
+
+    /**
+     * POST /admin/adventure-groups/delete
+     */
+    public static function deleteGroup(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        Auth::verifyCsrf();
+
+        $adminId  = (int)$_SESSION['user_id'];
+        $groupId  = (int)($_POST['group_id']  ?? 0);
+        $childId  = (int)($_POST['child_id']  ?? 0);
+
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        if ($isSuperadmin) {
+            $stmt = db()->prepare("SELECT id FROM adventure_groups WHERE id=?");
+            $stmt->execute([$groupId]);
+        } else {
+            $stmt = db()->prepare(
+                "SELECT ag.id FROM adventure_groups ag
+                 JOIN child_admins ch ON ag.child_id = ch.child_id
+                 WHERE ag.id=? AND ch.admin_id=?"
+            );
+            $stmt->execute([$groupId, $adminId]);
+        }
+        if ($stmt->fetch()) {
+            db()->prepare("DELETE FROM adventure_groups WHERE id=?")->execute([$groupId]);
+        }
+
+        redirect('/admin/adventures?child_id=' . $childId);
+    }
+
     // ── Kind: Session starten ────────────────────────────────────────────
 
     /**
@@ -340,6 +439,91 @@ class AdventureController
     }
 
     /**
+     * POST /learn/adventure-group/start
+     * Startet eine Session für ein Abenteuer-Paket (Gruppe).
+     */
+    public static function startGroupSession(): void
+    {
+        Auth::requireRole('child');
+        Auth::verifyCsrf();
+
+        $userId  = (int)$_SESSION['user_id'];
+        $groupId = (int)($_POST['group_id'] ?? 0);
+
+        // Gruppe validieren — muss diesem Kind gehören und pending sein
+        $grpStmt = db()->prepare(
+            "SELECT * FROM adventure_groups WHERE id=? AND child_id=? AND status='pending'"
+        );
+        $grpStmt->execute([$groupId, $userId]);
+        $group = $grpStmt->fetch();
+
+        if (!$group) { redirect('/learn/questlog'); }
+
+        // Alle Adventures der Gruppe laden (geordnet)
+        $members = db()->prepare(
+            "SELECT agi.adventure_id, agi.order_index
+             FROM adventure_group_items agi
+             WHERE agi.group_id=? ORDER BY agi.order_index"
+        );
+        $members->execute([$groupId]);
+        $memberAdvIds = array_column($members->fetchAll(), 'adventure_id');
+
+        if (empty($memberAdvIds)) { redirect('/learn/questlog'); }
+
+        // Laufende Gruppen-Sessions abbrechen
+        db()->prepare(
+            "UPDATE sessions SET status='aborted' WHERE user_id=? AND adventure_group_id=? AND status='active'"
+        )->execute([$userId, $groupId]);
+
+        $db = db();
+        $db->beginTransaction();
+        try {
+            // Session erstellen (plan_unit_id = NULL)
+            $db->prepare(
+                "INSERT INTO sessions (user_id, adventure_group_id, plan_unit_id, status) VALUES (?, ?, NULL, 'active')"
+            )->execute([$userId, $groupId]);
+            $sessionId = (int)$db->lastInsertId();
+
+            $iStmt = $db->prepare(
+                "INSERT INTO session_items (session_id, format, order_index, custom_text, second_try_allowed)
+                 VALUES (?, ?, ?, ?, 0)"
+            );
+            $idx = 0;
+            foreach ($memberAdvIds as $advId) {
+                $wStmt = db()->prepare(
+                    "SELECT word FROM custom_adventure_words WHERE adventure_id=? ORDER BY order_index"
+                );
+                $wStmt->execute([$advId]);
+                foreach (array_column($wStmt->fetchAll(), 'word') as $word) {
+                    $iStmt->execute([$sessionId, 'word', $idx++, $word]);
+                }
+                $sStmt = db()->prepare(
+                    "SELECT sentence FROM custom_adventure_sentences WHERE adventure_id=? ORDER BY order_index"
+                );
+                $sStmt->execute([$advId]);
+                foreach (array_column($sStmt->fetchAll(), 'sentence') as $sent) {
+                    $iStmt->execute([$sessionId, 'sentence', $idx++, $sent]);
+                }
+            }
+
+            if ($idx === 0) {
+                $db->rollBack();
+                redirect('/learn/questlog');
+            }
+
+            $db->prepare("UPDATE sessions SET total_items=? WHERE id=?")->execute([$idx, $sessionId]);
+            $db->prepare("UPDATE adventure_groups SET status='active' WHERE id=?")->execute([$groupId]);
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('AdventureController::startGroupSession — ' . $e->getMessage());
+            redirect('/learn/questlog?error=start_failed');
+        }
+
+        redirect('/learn/adventure?session_id=' . $sessionId);
+    }
+
+    /**
      * POST /learn/adventure/complete  (AJAX)
      * Schließt die Adventure-Session ab.
      */
@@ -359,7 +543,7 @@ class AdventureController
         $sessionId = (int)($data['session_id'] ?? 0);
 
         $sesStmt = db()->prepare(
-            "SELECT s.*, ca.id AS adv_id
+            "SELECT s.*, ca.id AS adv_id, ca.repeatable AS adv_repeatable
              FROM sessions s
              JOIN custom_adventures ca ON s.custom_adventure_id = ca.id
              WHERE s.id=? AND s.user_id=? AND s.status='active'"
@@ -406,9 +590,11 @@ class AdventureController
                  WHERE id=?"
             )->execute([(int)$stats['correct'], (int)$stats['wrong'], $sessionId]);
 
+            // Wiederholbar → 'pending' zurücksetzen, sonst 'completed'
+            $newAdvStatus = $session['adv_repeatable'] ? 'pending' : 'completed';
             $db->prepare(
-                "UPDATE custom_adventures SET status='completed', completed_at=CURRENT_TIMESTAMP WHERE id=?"
-            )->execute([$session['adv_id']]);
+                "UPDATE custom_adventures SET status=?, completed_at=CURRENT_TIMESTAMP WHERE id=?"
+            )->execute([$newAdvStatus, $session['adv_id']]);
 
             $db->commit();
 

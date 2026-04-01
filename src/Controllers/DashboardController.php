@@ -614,10 +614,10 @@ class DashboardController
             $msgStmt->execute([$cid]);
             $child['messages'] = $msgStmt->fetchAll();
 
-            // Aktives Familienziel
+            // Aktives oder zuletzt erreichtes Familienziel
             $goalStmt = db()->prepare("
                 SELECT * FROM family_goals
-                WHERE child_id=? AND status='active'
+                WHERE child_id=? AND status IN ('active','completed')
                 ORDER BY created_at DESC LIMIT 1
             ");
             $goalStmt->execute([$cid]);

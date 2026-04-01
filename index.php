@@ -489,6 +489,9 @@ match (true) {
     $uri === '/admin/adventures/delete' && $method === 'POST'
         => \App\Controllers\AdventureController::delete(),
 
+    $uri === '/admin/curriculum-help' && $method === 'GET'
+        => \App\Controllers\DashboardController::curriculumHelp(),
+
     $uri === '/admin/adventure-groups/save' && $method === 'POST'
         => \App\Controllers\AdventureController::saveGroup(),
 

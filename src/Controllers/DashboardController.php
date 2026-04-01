@@ -377,6 +377,69 @@ class DashboardController
         exit;
     }
 
+    // ── Curriculum-Hilfe ─────────────────────────────────────────────────
+
+    /**
+     * GET /admin/curriculum-help?child_id=X
+     * Zeigt alle Fehlerkategorien (A1–D4) aus dem passenden Lehrplan-JSON.
+     */
+    public static function curriculumHelp(): void
+    {
+        Auth::requireRole('admin', 'superadmin');
+        $adminId      = (int)$_SESSION['user_id'];
+        $isSuperadmin = ($_SESSION['user_role'] ?? '') === 'superadmin';
+        $childId      = (int)($_GET['child_id'] ?? 0);
+
+        if ($isSuperadmin) {
+            $stmt = db()->prepare(
+                "SELECT id, display_name, grade_level, school_type FROM users WHERE id=? AND role='child'"
+            );
+            $stmt->execute([$childId]);
+        } else {
+            $stmt = db()->prepare(
+                "SELECT u.id, u.display_name, u.grade_level, u.school_type
+                 FROM users u JOIN child_admins ca ON u.id=ca.child_id
+                 WHERE u.id=? AND ca.admin_id=?"
+            );
+            $stmt->execute([$childId, $adminId]);
+        }
+        $child = $stmt->fetch();
+        if (!$child) { redirect('/admin/dashboard'); }
+
+        // Bundesland aus verschlüsselten Kind-Settings
+        $federalState = null;
+        try {
+            $settings     = \App\Services\EncryptionService::make()->loadUserSettings($childId);
+            $federalState = $settings['federal_state'] ?? null;
+        } catch (\Throwable) {}
+
+        // Passendes Curriculum-JSON suchen
+        $curriculum = null;
+        if ($federalState) {
+            $dir = BASE_DIR . '/database/curricula/';
+            foreach (glob($dir . '*.json') ?: [] as $file) {
+                $data = json_decode(file_get_contents($file), true) ?? [];
+                if (strcasecmp($data['federal_state'] ?? '', $federalState) !== 0) continue;
+                if (strcasecmp($data['school_type']   ?? '', $child['school_type'] ?? '') !== 0) continue;
+                $gradeMin = (int)($data['grade_min'] ?? 0);
+                $gradeMax = (int)($data['grade_max'] ?? 99);
+                if ((int)$child['grade_level'] < $gradeMin || (int)$child['grade_level'] > $gradeMax) continue;
+                $curriculum = $data;
+                break;
+            }
+        }
+
+        // Kategorien nach Block gruppieren
+        $blocks = [];
+        foreach ($curriculum['categories'] ?? [] as $code => $cat) {
+            $block = $cat['block'] ?? substr($code, 0, 1);
+            $blocks[$block][] = array_merge(['code' => $code], $cat);
+        }
+        ksort($blocks);
+
+        require __DIR__ . '/../Views/admin/curriculum_help.php';
+    }
+
     // ── Private Hilfsmethoden ─────────────────────────────────────────────
 
     /**

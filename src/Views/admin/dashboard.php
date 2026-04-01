@@ -402,6 +402,8 @@ $formatLabel = [
                  class="btn btn-sm btn-secondary" title="Wortliste" style="margin-left:.25rem">📝</a>
               <a href="<?= url('/admin/adventures?child_id=' . (int)$child['id']) ?>"
                  class="btn btn-sm btn-secondary" title="Abenteuer verwalten" style="margin-left:.25rem">🗺️</a>
+              <a href="<?= url('/admin/curriculum-help?child_id=' . (int)$child['id']) ?>"
+                 class="btn btn-sm btn-secondary" title="Lehrplan-Kategorien erklären" style="margin-left:.25rem">📖</a>
             </td>
           </tr>
           <?php endforeach; ?>

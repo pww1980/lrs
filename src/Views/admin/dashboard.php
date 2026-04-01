@@ -1068,11 +1068,13 @@ $formatLabel = [
                   'week' => 'diese Woche', 'month' => 'diesen Monat', default => 'gesamt'
                 };
               ?>
-              <div class="goal-current">
+              <div class="goal-current" <?= $goal['status'] === 'completed' ? 'style="background:#e8f5e9;border:1px solid #a5d6a7"' : '' ?>>
                 <div class="goal-current-title">
-                  🎯 <?= htmlspecialchars($goal['title']) ?>
                   <?php if ($goal['status'] === 'completed'): ?>
-                    <span style="color:#4caf50"> ✅ Erreicht!</span>
+                    🎉 <?= htmlspecialchars($goal['title']) ?>
+                    <span style="color:#2e7d32"> ✅ Ziel erreicht!</span>
+                  <?php else: ?>
+                    🎯 <?= htmlspecialchars($goal['title']) ?>
                   <?php endif; ?>
                 </div>
                 <div style="font-size:.78rem;color:#558b2f;margin-bottom:.5rem">
@@ -1085,6 +1087,11 @@ $formatLabel = [
                 <div class="goal-progress-sub"><?= $gp ?> / <?= $gv ?> <?= $gtl ?> (<?= $pct ?>%)</div>
                 <?php if ($goal['reward_text']): ?>
                   <span class="goal-reward-badge">🎁 <?= htmlspecialchars($goal['reward_text']) ?></span>
+                <?php endif; ?>
+                <?php if ($goal['status'] === 'completed'): ?>
+                  <div style="font-size:.78rem;color:#558b2f;margin-top:.4rem">
+                    👇 Neues Ziel setzen oder altes Ziel löschen
+                  </div>
                 <?php endif; ?>
                 <form method="POST" action="<?= url('/admin/goal/delete') ?>" style="display:inline">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">

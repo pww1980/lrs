@@ -771,7 +771,7 @@ $mapIcon = fn(string $icon) => $iconMap[$icon] ?? $icon;
     <!-- Freigeschaltete Achievements -->
     <?php if (!empty($unlockedAchievements)): ?>
     <div class="achievements-section">
-      <div class="achievements-label">🏆 Deine <?= htmlspecialchars($themeLabelAch) ?>en</div>
+      <div class="achievements-label">🏆 Deine <?= htmlspecialchars($themeLabelAch) ?></div>
       <div class="achievements-row">
         <?php foreach ($unlockedAchievements as $ach):
           $isNew = !$ach['seen_by_user']; // war noch ungesehen vor diesem Laden
@@ -870,8 +870,9 @@ $mapIcon = fn(string $icon) => $iconMap[$icon] ?? $icon;
                 <?php if ($totalUnits > 0 && !$qIsLocked): ?>
                   <div class="quest-units">
                     <?= $doneUnits ?>/<?= $totalUnits ?> Einheiten
-                    <?php if ($pendingUnits > 0): ?>
-                      · <?= $pendingUnits ?> ausstehend
+                    <?php $remainingUnits = $totalUnits - $doneUnits; ?>
+                    <?php if ($remainingUnits > 0): ?>
+                      · <?= $remainingUnits ?> ausstehend
                     <?php endif; ?>
                   </div>
                 <?php endif; ?>

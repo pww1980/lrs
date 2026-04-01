@@ -182,11 +182,32 @@ body {
   font-weight: 700;
   font-size: 1.1rem;
   flex: 1;
+  color: #fff;
 }
 
 .navbar-user {
   font-size: .9rem;
   opacity: .9;
+  color: rgba(255,255,255,.85);
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navbar-links a,
+.navbar a {
+  color: rgba(255,255,255,.85);
+  text-decoration: none;
+  font-size: .9rem;
+}
+
+.navbar-links a:hover,
+.navbar a:hover {
+  color: #fff;
+  text-decoration: underline;
 }
 
 .navbar .btn-sm {

@@ -167,7 +167,7 @@ foreach ($categoryStatus as $code => $info) {
 <body class="theme-<?= htmlspecialchars($_SESSION['theme'] ?? 'minecraft') ?>">
 
 <nav class="navbar">
-  <span class="navbar-brand">⛏️ <?= htmlspecialchars(APP_NAME) ?></span>
+  <span class="navbar-brand"><?= themeIcon() ?> <?= htmlspecialchars(APP_NAME) ?></span>
   <span class="navbar-user">👤 <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?></span>
   <a href="<?= url('/admin/words') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">← Wörter</a>
   <a href="<?= url('/admin/dashboard') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">Dashboard</a>

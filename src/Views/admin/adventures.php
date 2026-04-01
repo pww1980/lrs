@@ -6,8 +6,9 @@
 use App\Helpers\Auth;
 $csrfToken = Auth::csrfToken();
 $pageTitle = 'Abenteuer — ' . ($child['display_name'] ?? '') . ' — ' . APP_NAME;
-$error  = $_GET['error'] ?? null;
-$saved  = (int)($_GET['saved'] ?? 0);
+$error      = $_GET['error'] ?? null;
+$saved      = (int)($_GET['saved'] ?? 0);
+$groupSaved = !empty($_GET['group_saved']);
 
 $statusLabel = [
     'pending'   => ['label' => 'Ausstehend', 'color' => '#e65100', 'bg' => '#fff3e0'],
@@ -122,12 +123,104 @@ $statusLabel = [
                   style="font-family:monospace"></textarea>
       </div>
 
+      <div class="form-group" style="margin-bottom:1rem">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.88rem">
+          <input type="checkbox" name="repeatable" value="1">
+          <span>🔁 <strong>Wiederholbar</strong> — Kind kann dieses Abenteuer beliebig oft spielen</span>
+        </label>
+      </div>
+
       <button type="submit" class="btn btn-primary">💾 Speichern &amp; weiter</button>
       <small style="color:var(--color-muted);margin-left:.75rem">
         Nach dem Speichern kannst du das KI-Diktat generieren lassen.
       </small>
     </form>
   </section>
+
+  <!-- ── ABENTEUER-PAKET ─────────────────────────────────────────────── -->
+  <?php $pendingAdvs = array_filter($adventures, fn($a) => $a['status'] === 'pending'); ?>
+  <?php if (count($pendingAdvs) >= 2): ?>
+  <section style="margin-bottom:2rem">
+    <div class="section-title">📦 Abenteuer-Paket erstellen <small style="font-weight:400;color:var(--color-muted)">(mehrere Abenteuer zusammen planen)</small></div>
+
+    <?php if ($groupSaved): ?>
+      <div class="alert alert-success" style="margin-bottom:1rem">✅ Paket gespeichert!</div>
+    <?php endif; ?>
+
+    <form method="post" action="<?= url('/admin/adventure-groups/save') ?>">
+      <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+      <input type="hidden" name="child_id"   value="<?= $childId ?>">
+
+      <div class="form-grid" style="margin-bottom:.75rem">
+        <div class="form-group">
+          <label class="form-label">Paket-Titel</label>
+          <input type="text" name="group_title" class="form-input" placeholder="z.B. Schulwoche KW 15">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Einplanen für</label>
+          <input type="date" name="group_sched" class="form-input" value="<?= date('Y-m-d') ?>" required>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label class="form-label">Enthaltene Abenteuer <small style="color:var(--color-muted)">(min. 2 auswählen)</small></label>
+        <div style="border:1px solid var(--color-border);border-radius:6px;padding:.5rem .75rem;display:flex;flex-wrap:wrap;gap:.5rem">
+          <?php foreach ($pendingAdvs as $pa): ?>
+            <label style="display:flex;align-items:center;gap:.4rem;padding:.3rem .6rem;background:#f8fafc;border:1px solid var(--color-border);border-radius:5px;cursor:pointer;font-size:.85rem">
+              <input type="checkbox" name="group_adventures[]" value="<?= $pa['id'] ?>">
+              <?= htmlspecialchars($pa['title']) ?>
+              <span style="color:var(--color-muted);font-size:.75rem">(<?= (int)$pa['word_count'] ?> Wörter)</span>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1rem">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.88rem">
+          <input type="checkbox" name="group_repeatable" value="1">
+          <span>🔁 <strong>Wiederholbar</strong></span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary">📦 Paket erstellen</button>
+    </form>
+  </section>
+  <?php endif; ?>
+
+  <!-- ── BESTEHENDE PAKETE ───────────────────────────────────────────── -->
+  <?php if (!empty($adventureGroups)): ?>
+  <section style="margin-bottom:2rem">
+    <div class="section-title">📦 Bestehende Pakete</div>
+    <?php foreach ($adventureGroups as $grp):
+      $gst = $statusLabel[$grp['status']] ?? $statusLabel['pending'];
+    ?>
+    <div class="adv-card">
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <strong>📦 <?= htmlspecialchars($grp['title']) ?></strong>
+          <span class="status-badge" style="background:<?= $gst['bg'] ?>;color:<?= $gst['color'] ?>;margin-left:.5rem">
+            <?= $gst['label'] ?>
+          </span>
+          <?php if ($grp['repeatable']): ?>
+            <span class="status-badge" style="background:#e8f5e9;color:#2e7d32;margin-left:.25rem">🔁 Wiederholbar</span>
+          <?php endif; ?>
+          <div class="adv-meta">
+            📅 <?= date('d.m.Y', strtotime($grp['scheduled_date'])) ?>
+            &nbsp;· <?= (int)$grp['adventure_count'] ?> Abenteuer
+          </div>
+        </div>
+        <form method="post" action="<?= url('/admin/adventure-groups/delete') ?>" style="margin:0"
+              onsubmit="return confirm('Paket löschen?')">
+          <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+          <input type="hidden" name="group_id"   value="<?= $grp['id'] ?>">
+          <input type="hidden" name="child_id"   value="<?= $childId ?>">
+          <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+        </form>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </section>
+  <?php endif ?>
 
   <!-- ── BESTEHENDE ABENTEUER ───────────────────────────────────────── -->
   <section>
@@ -146,6 +239,9 @@ $statusLabel = [
             <span class="status-badge" style="background:<?= $st['bg'] ?>;color:<?= $st['color'] ?>;margin-left:.5rem">
               <?= $st['label'] ?>
             </span>
+            <?php if (!empty($adv['repeatable'])): ?>
+              <span class="status-badge" style="background:#e8f5e9;color:#2e7d32;margin-left:.25rem">🔁 Wiederholbar</span>
+            <?php endif; ?>
             <div class="adv-meta">
               📅 Geplant: <strong><?= date('d.m.Y', strtotime($adv['scheduled_date'])) ?></strong>
               <?php if ($adv['school_date']): ?>

@@ -299,7 +299,7 @@ $formatLabel = [
 </head>
 <body>
 <nav class="navbar">
-  <span class="navbar-brand">⛏️ <?= htmlspecialchars(APP_NAME) ?></span>
+  <span class="navbar-brand"><?= themeIcon() ?> <?= htmlspecialchars(APP_NAME) ?></span>
   <span class="navbar-user">👤 <?= htmlspecialchars($_SESSION['display_name'] ?? '') ?></span>
   <a href="<?= url('/admin/words') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">📝 Wörter</a>
   <a href="<?= url('/admin/words/generate') ?>" class="btn btn-sm btn-secondary" style="margin-right:.35rem">🔄 Wörter generieren</a>
@@ -348,7 +348,7 @@ $formatLabel = [
             <td><strong><?= htmlspecialchars($child['display_name']) ?></strong></td>
             <td><?= htmlspecialchars($child['grade_level'] ?? '—') ?></td>
             <td><?= htmlspecialchars($child['school_type'] ?? '—') ?></td>
-            <td>⛏️ <?= htmlspecialchars(ucfirst($child['theme'] ?? 'minecraft')) ?></td>
+            <td><?= themeIcon($child['theme'] ?? 'minecraft') ?> <?= htmlspecialchars(ucfirst($child['theme'] ?? 'minecraft')) ?></td>
             <td>
               <?php if ($child['last_login']): ?>
                 <?= date('d.m.Y', strtotime($child['last_login'])) ?>

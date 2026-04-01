@@ -36,6 +36,10 @@ foreach ($theme['biomes'] ?? [] as $tb) {
         'to'   => $tb['color_to']   ?? '#777',
     ];
 }
+
+// Icon-Map: ersetzt Minecraft-Icons durch theme-spezifische Icons
+$iconMap = $theme['icon_map'] ?? [];
+$mapIcon = fn(string $icon) => $iconMap[$icon] ?? $icon;
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -593,9 +597,35 @@ foreach ($theme['biomes'] ?? [] as $tb) {
     </div>
   <?php endif; ?>
 
-  <?php if (!empty($pendingAdventures)): ?>
+  <?php if (!empty($pendingAdventures) || !empty($pendingAdventureGroups)): ?>
     <div class="adventure-banner">
       <h3>🗺️ Zusätzliche Abenteuer</h3>
+
+      <?php foreach ($pendingAdventureGroups ?? [] as $grp): ?>
+        <div class="adventure-item">
+          <div>
+            <div class="adv-title">📦 <?= htmlspecialchars($grp['title']) ?></div>
+            <div class="adv-meta">
+              <?= (int)$grp['adventure_count'] ?> Abenteuer im Paket
+              <?php if ($grp['scheduled_date']): ?>
+                · Geplant: <?= date('d.m.Y', strtotime($grp['scheduled_date'])) ?>
+              <?php endif; ?>
+              <?php if ($grp['repeatable']): ?> · 🔁<?php endif; ?>
+            </div>
+          </div>
+          <?php if ($grp['active_session_id']): ?>
+            <a href="<?= url('/learn/adventure?session_id=' . (int)$grp['active_session_id']) ?>"
+               class="btn-adventure">Weiter →</a>
+          <?php else: ?>
+            <form method="post" action="<?= url('/learn/adventure-group/start') ?>">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+              <input type="hidden" name="group_id"   value="<?= (int)$grp['id'] ?>">
+              <button type="submit" class="btn-adventure">Starten! 🚀</button>
+            </form>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+
       <?php foreach ($pendingAdventures as $adv): ?>
         <div class="adventure-item">
           <div>
@@ -608,6 +638,7 @@ foreach ($theme['biomes'] ?? [] as $tb) {
               <?php if ($adv['scheduled_date']): ?>
                 · Geplant: <?= date('d.m.Y', strtotime($adv['scheduled_date'])) ?>
               <?php endif; ?>
+              <?php if (!empty($adv['repeatable'])): ?> · 🔁<?php endif; ?>
             </div>
           </div>
           <?php if ($adv['active_session_id']): ?>
@@ -722,7 +753,7 @@ foreach ($theme['biomes'] ?? [] as $tb) {
     <!-- Nächstes Achievement -->
     <?php if (!empty($nextAchievements)): $nxt = $nextAchievements[0]; ?>
     <div class="next-ach-card">
-      <div class="next-ach-icon"><?= $nxt['icon'] ?></div>
+      <div class="next-ach-icon"><?= $mapIcon($nxt['icon']) ?></div>
       <div class="next-ach-info">
         <div class="next-ach-title">Nächstes Ziel</div>
         <div class="next-ach-name"><?= htmlspecialchars($nxt['title']) ?></div>
@@ -746,7 +777,7 @@ foreach ($theme['biomes'] ?? [] as $tb) {
           $isNew = !$ach['seen_by_user']; // war noch ungesehen vor diesem Laden
         ?>
           <div class="ach-badge <?= $isNew ? 'new' : '' ?>" title="">
-            <span class="ach-icon"><?= $ach['icon'] ?></span>
+            <span class="ach-icon"><?= $mapIcon($ach['icon']) ?></span>
             <?= htmlspecialchars($ach['title']) ?>
             <span class="ach-tooltip"><?= htmlspecialchars($ach['description']) ?></span>
           </div>

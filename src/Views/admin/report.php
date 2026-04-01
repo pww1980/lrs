@@ -218,7 +218,7 @@ function severityFill(string $sev): string {
   <!-- ══════════════════════ KOPFZEILE ══════════════════════ -->
   <div class="report-header">
     <div>
-      <div class="report-logo">⛏️ Lennarts Diktat-Trainer</div>
+      <div class="report-logo"><?= themeIcon() ?> <?= htmlspecialchars(APP_NAME) ?></div>
       <h1><?= htmlspecialchars($child['display_name']) ?> — Lernbericht</h1>
       <p style="margin-top:.25rem;font-size:10pt;color:#555">
         Klasse <?= htmlspecialchars($child['grade_level'] ?? '?') ?> ·

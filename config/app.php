@@ -132,6 +132,26 @@ function runSchemaMigrations(PDO $pdo): void
         order_index  INTEGER NOT NULL DEFAULT 0
     )");
 
+    // ── 1b. Abenteuer-Gruppen-Tabellen ───────────────────────────────────
+    $pdo->exec("CREATE TABLE IF NOT EXISTS adventure_groups (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        child_id       INTEGER NOT NULL REFERENCES users(id),
+        created_by     INTEGER NOT NULL REFERENCES users(id),
+        title          VARCHAR(200) NOT NULL DEFAULT 'Abenteuerpaket',
+        scheduled_date DATE NOT NULL,
+        status         TEXT CHECK(status IN ('pending','active','completed','cancelled')) DEFAULT 'pending',
+        repeatable     INTEGER DEFAULT 0,
+        created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed_at   DATETIME NULL
+    )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS adventure_group_items (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id     INTEGER NOT NULL REFERENCES adventure_groups(id) ON DELETE CASCADE,
+        adventure_id INTEGER NOT NULL REFERENCES custom_adventures(id),
+        order_index  INTEGER NOT NULL DEFAULT 0
+    )");
+
     // ── 2. Neue Spalten zu bestehenden Tabellen hinzufügen ────────────────
     // ALTER TABLE ADD COLUMN ist in SQLite idempotent wenn wir vorher prüfen.
     $existingCols = static function (PDO $pdo, string $table): array {
@@ -145,10 +165,18 @@ function runSchemaMigrations(PDO $pdo): void
     if (!in_array('custom_adventure_id', $sessionCols, true)) {
         $pdo->exec("ALTER TABLE sessions ADD COLUMN custom_adventure_id INTEGER NULL REFERENCES custom_adventures(id)");
     }
+    if (!in_array('adventure_group_id', $sessionCols, true)) {
+        $pdo->exec("ALTER TABLE sessions ADD COLUMN adventure_group_id INTEGER NULL REFERENCES adventure_groups(id)");
+    }
 
     $itemCols = $existingCols($pdo, 'session_items');
     if (!in_array('custom_text', $itemCols, true)) {
         $pdo->exec("ALTER TABLE session_items ADD COLUMN custom_text VARCHAR(500) NULL");
+    }
+
+    $advCols = $existingCols($pdo, 'custom_adventures');
+    if (!in_array('repeatable', $advCols, true)) {
+        $pdo->exec("ALTER TABLE custom_adventures ADD COLUMN repeatable INTEGER DEFAULT 0");
     }
 
     // ── 3. sessions.plan_unit_id nullable machen (SQLite table recreation) ─
@@ -226,4 +254,20 @@ function redirect(string $path): never
 {
     header('Location: ' . url($path));
     exit;
+}
+
+/**
+ * Gibt das Theme-Icon des aktuellen (oder angegebenen) Themes zurück.
+ * Fallback: ⛏️ (Minecraft)
+ */
+function themeIcon(string $themeName = null): string
+{
+    $name = $themeName ?? ($_SESSION['theme'] ?? 'minecraft');
+    static $cache = [];
+    if (!isset($cache[$name])) {
+        $path = BASE_DIR . "/themes/{$name}/theme.json";
+        $data = file_exists($path) ? (json_decode(file_get_contents($path), true) ?? []) : [];
+        $cache[$name] = $data['icon'] ?? '⛏️';
+    }
+    return $cache[$name];
 }
